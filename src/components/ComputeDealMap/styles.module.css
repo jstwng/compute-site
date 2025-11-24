@@ -1,0 +1,597 @@
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.subtitle {
+  font-size: 12px;
+  color: var(--text-strong);
+  margin: 0;
+  line-height: 1.5;
+}
+
+.subtitleLink {
+  color: var(--text-strong);
+  text-decoration: underline;
+  text-decoration-color: var(--link-underline);
+  text-underline-offset: 2px;
+}
+
+.subtitleLink:hover { text-decoration-color: var(--text-strong); }
+
+/* Top section: description+bars (left) | graph (right) */
+.topSection {
+  display: grid;
+  grid-template-columns: 300px minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+  width: 100%;
+  margin-bottom: 8px;
+}
+
+.leftColumn {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+@media (max-width: 900px) {
+  .topSection { grid-template-columns: 1fr; }
+}
+
+/* HeaderStats — dense inline strip (legacy, may be unused) */
+.statsStrip {
+  display: flex;
+  flex-wrap: wrap;
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--text-strong);
+}
+
+.statsItem { white-space: nowrap; }
+.statsValue { font-weight: 600; color: var(--text-strong); }
+.statsLabel { font-weight: 400; color: var(--text-strong); }
+.statsDivider { color: var(--text-faint); padding: 0 8px; }
+.statsLink { color: var(--text-strong); text-decoration: underline; text-decoration-color: var(--link-underline); text-underline-offset: 2px; }
+.statsLink:hover { text-decoration-color: var(--text-strong); }
+
+/* FilterBar — legacy class-based pills (most styles now inline in FilterBar.jsx) */
+.filterBar {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+  width: 100%;
+}
+
+.filterGroup {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--border);
+  padding: 5.5px 8px;
+  height: 27px;
+  flex: 0 0 auto;
+}
+
+.filterGroupLabel {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-strong);
+  margin-right: 8px;
+  white-space: nowrap;
+}
+
+.filterPills {
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
+  white-space: nowrap;
+  overflow: hidden;
+  flex: 1;
+  justify-content: space-between;
+}
+
+.filterPill,
+.filterPillActive {
+  font: inherit;
+  font-size: 12px;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  color: var(--text-strong);
+  transition: opacity 150ms ease;
+}
+
+.filterPill { font-weight: 400; opacity: 0.5; }
+.filterPill:hover { opacity: 1; }
+.filterPillActive { font-weight: 600; opacity: 1; }
+
+.filterSearchMinimal {
+  font: inherit;
+  font-size: 12px;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  color: var(--text-strong);
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 0;
+  height: 27px;
+  padding: 5.5px 8px;
+  outline: none;
+  flex: 1 1 auto;
+  min-width: 120px;
+  box-shadow: none;
+}
+
+.filterSearchMinimal::placeholder { color: var(--text-faint); }
+.filterSearchMinimal:focus { border-color: var(--text-muted); box-shadow: none; outline: none; }
+
+@media (max-width: 700px) {
+  .filterSearchMinimal { width: 100%; flex: none; }
+}
+
+/* ConcentrationBars (sellers + buyers) */
+.concentrationWrap {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.concentrationColumn { display: flex; flex-direction: column; }
+
+.concentrationLabel {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-strong);
+  margin-bottom: 4px;
+}
+
+.barRow {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 3px;
+}
+
+.barName {
+  font-size: 12px;
+  font-weight: 400;
+  min-width: 65px;
+  color: var(--text-strong);
+}
+
+.barTrack {
+  flex: 1;
+  height: 6px;
+  background: var(--bar-track);
+  position: relative;
+  display: block;
+}
+
+.barFill {
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 6px;
+  display: block;
+}
+
+.barCount {
+  font-size: 12px;
+  color: var(--text-muted);
+  min-width: 20px;
+  text-align: right;
+}
+
+/* Graph */
+.graphWrap {
+  background: var(--bg);
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  position: relative;
+  align-self: stretch;
+}
+
+.graphSvg {
+  width: 100%;
+  height: 100%;
+  display: block;
+  font-family: inherit;
+}
+
+.nodeRect {
+  fill: var(--node-fill);
+  stroke: var(--node-stroke);
+  stroke-width: 1;
+}
+
+.nodeName {
+  font-size: 12px;
+  font-weight: 400;
+  fill: var(--text);
+}
+
+.nodeTicker {
+  font-size: 12px;
+  font-weight: 400;
+  fill: var(--text-muted);
+}
+
+.edgeLine { stroke: var(--edge); }
+
+.graphReset {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 2;
+  background: transparent;
+  border: none;
+  padding: 4px;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: color 150ms ease;
+}
+.graphReset:hover { color: var(--text); }
+
+.graphClose {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  z-index: 4;
+  background: transparent;
+  border: none;
+  padding: 4px;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: color 150ms ease;
+}
+.graphClose {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.graphClose:hover { color: var(--text); }
+.graphCloseIcon { display: block; flex-shrink: 0; }
+
+.graphExpandHint {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  border: none;
+  padding: 4px;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 150ms ease, color 150ms ease;
+  pointer-events: auto;
+}
+.graphWrap:hover .graphExpandHint { opacity: 1; }
+.graphExpandHint:hover { color: var(--text); }
+.graphExpandIcon { display: block; flex-shrink: 0; }
+
+.graphModalBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(0, 0, 0, 0.78);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  animation: graphModalFade 150ms ease;
+}
+
+.graphModalFrame {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  max-width: 1600px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  display: flex;
+  overflow: hidden;
+}
+.graphModalFrame > div { flex: 1; height: 100%; }
+
+@keyframes graphModalFade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.legendLabel {
+  font-size: 11px;
+  font-weight: 400;
+  fill: var(--text);
+}
+
+/* DealCard */
+.dealCard {
+  position: absolute;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  box-shadow: var(--card-shadow);
+  padding: 6px 8px;
+  min-width: 300px;
+  max-width: 360px;
+  font-size: 12px;
+  line-height: 1.45;
+  pointer-events: none;
+  z-index: 10;
+  color: var(--text);
+}
+
+.dealCardTitle {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+  margin: 0 0 6px;
+}
+
+.dealCardDivider {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 6px 0 8px;
+}
+
+.dealCardAggregate {
+  font-weight: 600;
+  color: var(--text);
+  margin: 0 0 8px;
+}
+
+.dealCardList {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.dealCardList li strong { color: var(--text); }
+
+.dealCardLink {
+  color: var(--text);
+  text-decoration: underline;
+  text-decoration-color: var(--link-underline);
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+/* CompanyCard */
+.companyCard {
+  position: absolute;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  box-shadow: var(--card-shadow);
+  padding: 6px 8px;
+  min-width: 260px;
+  max-width: 320px;
+  font-size: 12px;
+  line-height: 1.45;
+  pointer-events: auto;
+  z-index: 20;
+  color: var(--text);
+}
+
+.companyCardHeader {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 2px;
+}
+
+.companyCardName {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.companyCardTicker {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.companyCardStat {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin: 0 0 4px;
+}
+
+.companyCardList {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.companyCardDeal {
+  cursor: pointer;
+  padding: 1px 4px;
+  color: var(--text);
+  transition: background 100ms ease;
+}
+
+.companyCardDeal:hover { background: var(--row-highlight); }
+
+.companyCardCounterparty { font-weight: 600; }
+
+.companyCardDealMeta {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+/* DealTable */
+.tableWrap {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  min-width: 820px;
+  border-collapse: collapse;
+  font-size: 12px;
+  color: var(--text);
+}
+
+.table thead th {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-strong);
+  text-align: left;
+  padding: 5px 0;
+  border-bottom: 1px solid var(--border-row);
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+  width: 1px;
+  position: sticky;
+  top: 0;
+  background: var(--bg);
+  z-index: 10;
+}
+
+.table thead th[data-align="right"] { text-align: right; }
+.table thead th[data-align="center"] { text-align: center; }
+
+.table tbody td {
+  padding: 5px 0;
+  vertical-align: top;
+  line-height: 1.35;
+  border-bottom: 1px solid var(--border-soft);
+  white-space: nowrap;
+  width: 1px;
+}
+
+.table tbody td + td,
+.table thead th + th { padding-left: 14px; }
+.table tbody td:first-child,
+.table thead th:first-child { padding-left: 8px; }
+.table tbody td:last-child,
+.table thead th:last-child { padding-right: 8px; }
+
+.table tbody td[data-align="center"] { text-align: center; }
+
+.table tbody tr:hover td { background: var(--row-hover); }
+.table tbody tr.highlighted td { background: var(--row-highlight) !important; }
+
+.valueCell {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.dealTypePill {
+  font-size: 12px;
+  color: var(--text);
+  white-space: nowrap;
+  font-weight: 400;
+}
+
+.fundingDash { color: var(--text-muted); }
+
+.table tbody td.descCell {
+  width: 100%;
+  max-width: 0;
+}
+
+.descTextTruncated {
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.descTextExpanded {
+  display: block;
+  white-space: normal;
+  overflow: visible;
+  word-break: break-word;
+}
+
+.clickableRow { cursor: pointer; }
+
+.sortIndicator { color: var(--text-muted); margin-left: 2px; }
+.sourceLink { color: var(--text-strong); }
+
+/* SourcesSection */
+.sourcesSection {
+  margin-top: 12px;
+  padding-top: 0;
+}
+
+.sectionSubheader {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-strong);
+  letter-spacing: 0;
+  text-transform: none;
+  margin: 0;
+}
+
+.sourcesHeading {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-strong);
+  letter-spacing: 0;
+  text-transform: none;
+  margin: 0 0 8px;
+}
+
+.sourcesCategoryCell {
+  font-weight: 600;
+  color: var(--text-strong);
+  white-space: nowrap;
+}
+
+.sourcesLink {
+  color: var(--text);
+  text-decoration: none;
+  border-bottom: none;
+}
+
+.sourcesLink:hover {
+  text-decoration: underline;
+  text-decoration-color: var(--link-underline);
+  text-underline-offset: 2px;
+}
+
+@keyframes flashHighlight {
+  0%   { background: var(--row-flash); }
+  60%  { background: var(--row-flash); }
+  100% { background: transparent; }
+}
+
+.flashRow td { animation: flashHighlight 1.4s ease forwards; }
+
+@media (max-width: 640px) {
+  .graphWrap { padding: 16px; }
+}

@@ -1,0 +1,7 @@
+node_modules
+dist
+.DS_Store
+.env
+.env.local
+src/components/ComputeDealMap/data.generated.json
+src/components/ComputeDealMap/companies.generated.json

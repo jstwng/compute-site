@@ -1,0 +1,112 @@
+:root {
+  color-scheme: light dark;
+  --bg:               #FFFFFF;
+  --text:             #2A2A2A;
+  --text-strong:      #000000;
+  --text-muted:       #8A8A8A;
+  --text-faint:       #999999;
+  --border:           rgb(213, 208, 200);
+  --border-strong:    #000000;
+  --border-soft:      #E8E8E8;
+  --border-row:       #2A2A2A;
+  --node-fill:        #FFFFFF;
+  --node-stroke:      #2A2A2A;
+  --edge:             #2A2A2A;
+  --row-hover:        #F5F5F5;
+  --row-highlight:    #F0F0F0;
+  --row-flash:        #FFF5CC;
+  --link-underline:   #999999;
+  --bar-track:        #EEEEEE;
+  --bar-rank1:        #000000;
+  --bar-rank-mid:     #888888;
+  --bar-others:       #CCCCCC;
+  --scrollbar:        rgba(0, 0, 0, 0.15);
+  --scrollbar-hover:  rgba(0, 0, 0, 0.30);
+  --card-bg:          #FFFFFF;
+  --card-border:      #000000;
+  --card-shadow:      0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg:               #0E0E0E;
+    --text:             #F2F2F2;
+    --text-strong:      #FFFFFF;
+    --text-muted:       #888888;
+    --text-faint:       #666666;
+    --border:           #333333;
+    --border-strong:    #B0B0B0;
+    --border-soft:      #1F1F1F;
+    --border-row:       #2A2A2A;
+    --node-fill:        #161616;
+    --node-stroke:      #B0B0B0;
+    --edge:             #B0B0B0;
+    --row-hover:        #181818;
+    --row-highlight:    #1F1F1F;
+    --row-flash:        #3A3A2A;
+    --link-underline:   #555555;
+    --bar-track:        #222222;
+    --bar-rank1:        #FFFFFF;
+    --bar-rank-mid:     #888888;
+    --bar-others:       #444444;
+    --scrollbar:        rgba(255, 255, 255, 0.18);
+    --scrollbar-hover:  rgba(255, 255, 255, 0.35);
+    --card-bg:          #161616;
+    --card-border:      #B0B0B0;
+    --card-shadow:      0 2px 8px rgba(0, 0, 0, 0.6);
+  }
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+}
+body {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  font-size: 12px;
+  background: var(--bg);
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+}
+a { color: inherit; text-decoration: none; }
+
+/* Minimal custom scrollbar — 4px thumb in themed color, transparent track. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar) transparent;
+}
+*::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+*::-webkit-scrollbar-track { background: transparent; }
+*::-webkit-scrollbar-thumb {
+  background: var(--scrollbar);
+  border-radius: 2px;
+}
+*::-webkit-scrollbar-thumb:hover { background: var(--scrollbar-hover); }
+
+.layout {
+  min-height: 100vh;
+}
+
+.projects-area {
+  margin-left: 200px;
+  padding: 16px 16px 16px 0;
+}
+
+@media (max-width: 1024px) {
+  .projects-area {
+    margin-left: 180px;
+    padding: 16px 16px 16px 0;
+  }
+}
+
+@media (max-width: 640px) {
+  .projects-area {
+    margin-left: 0;
+    padding: 16px;
+  }
+}

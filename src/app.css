@@ -1,0 +1,65 @@
+.computePage {
+  max-width: none;
+  margin: 0;
+  padding: 16px 16px 28px;
+  font-family: 'Inter', system-ui, sans-serif;
+  color: var(--text);
+}
+
+.computeHeader {
+  margin-bottom: 14px;
+}
+
+.computeTitle {
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0;
+  margin: 0 0 6px 0;
+  color: var(--text-strong);
+}
+
+.computeTagline {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-strong);
+  margin: 0;
+  max-width: 640px;
+}
+
+.computeTagline a {
+  color: var(--text);
+  text-decoration: underline;
+  text-decoration-color: var(--link-underline);
+  text-underline-offset: 2px;
+}
+
+.computeTagline a:hover { text-decoration-color: var(--text-strong); }
+
+.graphBlock {
+  height: min(62vh, 560px);
+  min-height: 380px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  margin-bottom: 20px;
+  position: relative;
+}
+
+.computeFooter {
+  margin-top: 28px;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.computeFooter a {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-color: var(--link-underline);
+  text-underline-offset: 2px;
+}
+
+@media (max-width: 720px) {
+  .computePage { padding: 12px 12px 24px; }
+  .computeTitle { font-size: 12px; }
+  .graphBlock { height: 56vh; min-height: 320px; }
+}
