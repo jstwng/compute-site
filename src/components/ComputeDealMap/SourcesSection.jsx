@@ -125,6 +125,15 @@ const COLUMNS = [
 export default function SourcesSection() {
   const [sort, setSort] = useState({ column: 'date', direction: 'desc' })
   const [visibleCount, setVisibleCount] = useState(20)
+  const [expandedIds, setExpandedIds] = useState(() => new Set())
+
+  const toggleExpanded = (id) => {
+    setExpandedIds(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id); else next.add(id)
+      return next
+    })
+  }
 
   const ROWS = useMemo(
     () => [...deriveRows(DEALS), ...EXTRAS].map((r, i) => ({ ...r, n: i + 1 })),
@@ -186,23 +195,35 @@ export default function SourcesSection() {
             </tr>
           </thead>
           <tbody>
-            {visible.map(r => (
-              <tr key={r.n}>
-                <td className={styles.sourcesCategoryCell}>{r.source}</td>
-                <td style={{ whiteSpace: 'normal', width: 'auto' }}>
-                  {r.url ? (
-                    <a className={styles.sourcesLink} href={r.url} target="_blank" rel="noreferrer">{r.article}</a>
-                  ) : r.article}
-                </td>
-                <td>{r.date}</td>
-                <td style={{ whiteSpace: 'normal', width: 'auto' }}>{r.deals}</td>
-                <td style={{ textAlign: 'center' }}>
-                  {r.url ? (
-                    <a className={styles.sourceLink} href={r.url} target="_blank" rel="noreferrer">↗</a>
-                  ) : <span className={styles.fundingDash}>—</span>}
-                </td>
-              </tr>
-            ))}
+            {visible.map(r => {
+              const expanded = expandedIds.has(r.n)
+              const truncClass = expanded ? styles.descTextExpanded : styles.descTextTruncated
+              return (
+                <tr
+                  key={r.n}
+                  className={styles.clickableRow}
+                  onClick={() => toggleExpanded(r.n)}
+                >
+                  <td className={styles.sourcesCategoryCell}>{r.source}</td>
+                  <td className={styles.descCell}>
+                    <div className={truncClass}>
+                      {r.url ? (
+                        <a className={styles.sourcesLink} href={r.url} target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()}>{r.article}</a>
+                      ) : r.article}
+                    </div>
+                  </td>
+                  <td>{r.date}</td>
+                  <td>
+                    <div className={truncClass}>{r.deals}</div>
+                  </td>
+                  <td style={{ textAlign: 'center' }} onClick={e => e.stopPropagation()}>
+                    {r.url ? (
+                      <a className={styles.sourceLink} href={r.url} target="_blank" rel="noreferrer">↗</a>
+                    ) : <span className={styles.fundingDash}>—</span>}
+                  </td>
+                </tr>
+              )
+            })}
           </tbody>
         </table>
         {sorted.length > 0 && (
