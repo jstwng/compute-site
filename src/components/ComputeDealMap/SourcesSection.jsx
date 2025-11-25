@@ -189,13 +189,13 @@ export default function SourcesSection() {
             {visible.map(r => (
               <tr key={r.n}>
                 <td className={styles.sourcesCategoryCell}>{r.source}</td>
-                <td>
+                <td style={{ whiteSpace: 'normal', width: 'auto' }}>
                   {r.url ? (
                     <a className={styles.sourcesLink} href={r.url} target="_blank" rel="noreferrer">{r.article}</a>
                   ) : r.article}
                 </td>
                 <td>{r.date}</td>
-                <td>{r.deals}</td>
+                <td style={{ whiteSpace: 'normal', width: 'auto' }}>{r.deals}</td>
                 <td style={{ textAlign: 'center' }}>
                   {r.url ? (
                     <a className={styles.sourceLink} href={r.url} target="_blank" rel="noreferrer">↗</a>
