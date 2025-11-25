@@ -8,6 +8,8 @@ export const DEAL_TYPES = {
   cloud_capacity:    { label: 'Cloud Capacity',     color: '#2A2A2A', dash: null },
   m_and_a:           { label: 'M&A / Licensing',    color: '#2A2A2A', dash: null },
   funding_round:     { label: 'Funding Round',      color: '#2A2A2A', dash: null },
+  power_ppa:         { label: 'Power PPA',           color: '#2A2A2A', dash: '4,2' },
+  equipment_supply:  { label: 'Equipment Supply',    color: '#2A2A2A', dash: null },
 }
 
 const companyBySlug = new Map(COMPANIES.map(c => [c.slug, c]))
