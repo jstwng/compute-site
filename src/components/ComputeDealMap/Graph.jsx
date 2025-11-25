@@ -9,6 +9,30 @@ const NODE_WIDTH = 100
 const NODE_HEIGHT = 36
 const MARGIN = 15
 const MIN_GAP = 8
+// Horizontal padding inside a node when its label overflows the default
+// width. Mirrors the ~5px top/bottom padding above and below the name/ticker
+// stack in a 36px-tall node.
+const NODE_HPAD = 5
+
+// Canvas-based text measurement. Cached canvas + font string; runs on first
+// call and for each unique label as nodes enter the graph.
+function measureNodeText(text) {
+  if (!text) return 0
+  if (typeof document === 'undefined') return text.length * 7
+  const canvas = measureNodeText._c || (measureNodeText._c = document.createElement('canvas'))
+  const ctx = canvas.getContext('2d')
+  ctx.font = '400 12px Inter, system-ui, -apple-system, sans-serif'
+  return ctx.measureText(text).width
+}
+
+// Node width: the default NODE_WIDTH when the longer of name/ticker fits
+// comfortably, otherwise grown to fit the label plus symmetric padding.
+function nodeWidthFor(company) {
+  const nameW = measureNodeText(company.name)
+  const tickerW = company.ticker ? measureNodeText(company.ticker) : 0
+  const needed = Math.max(nameW, tickerW) + NODE_HPAD * 2
+  return Math.max(NODE_WIDTH, Math.ceil(needed))
+}
 // Force-directed layouts never pack to full grid capacity — collision + spring
 // forces need slack. 0.7 is the empirical ceiling before removeAllOverlaps
 // starts pushing nodes to the frame edge.
@@ -64,7 +88,7 @@ function selectVisibleNodes(graphDeals, focusedNode, max) {
 // Hard-constraint overlap remover. Must run LAST — nothing modifies node
 // positions after this returns. Up to 50 passes, early exit once the largest
 // remaining overlap is under 0.5px. Boundary clamp happens INSIDE each pass.
-function removeAllOverlaps(nodes, w, h, minGap, svgW, svgH) {
+function removeAllOverlaps(nodes, h, minGap, svgW, svgH) {
   nodes.sort((a, b) => a.x - b.x)
   const edgeMargin = MARGIN
   for (let pass = 0; pass < 50; pass++) {
@@ -72,9 +96,9 @@ function removeAllOverlaps(nodes, w, h, minGap, svgW, svgH) {
     for (let i = 0; i < nodes.length; i++) {
       for (let j = i + 1; j < nodes.length; j++) {
         const a = nodes[i], b = nodes[j]
-        const reqX = w + minGap
+        const reqX = (a.w + b.w) / 2 + minGap
         const reqY = h + minGap
-        const dx = (b.x + w / 2) - (a.x + w / 2)
+        const dx = (b.x + b.w / 2) - (a.x + a.w / 2)
         const dy = (b.y + h / 2) - (a.y + h / 2)
         const absDx = Math.abs(dx)
         const absDy = Math.abs(dy)
@@ -95,7 +119,7 @@ function removeAllOverlaps(nodes, w, h, minGap, svgW, svgH) {
       }
     }
     nodes.forEach(d => {
-      d.x = Math.max(edgeMargin, Math.min(svgW - w - edgeMargin, d.x))
+      d.x = Math.max(edgeMargin, Math.min(svgW - d.w - edgeMargin, d.x))
       d.y = Math.max(edgeMargin, Math.min(svgH - h - edgeMargin, d.y))
     })
     if (maxOverlap < 0.5) break
@@ -106,9 +130,10 @@ function removeAllOverlaps(nodes, w, h, minGap, svgW, svgH) {
   for (let i = 0; i < nodes.length; i++) {
     for (let j = i + 1; j < nodes.length; j++) {
       const a = nodes[i], b = nodes[j]
-      const dx = Math.abs((a.x + w / 2) - (b.x + w / 2))
+      const reqX = (a.w + b.w) / 2 + minGap
+      const dx = Math.abs((a.x + a.w / 2) - (b.x + b.w / 2))
       const dy = Math.abs((a.y + h / 2) - (b.y + h / 2))
-      if (dx < w + minGap && dy < h + minGap) {
+      if (dx < reqX && dy < h + minGap) {
         console.error(`Graph overlap: ${a.id} ↔ ${b.id} (dx=${dx.toFixed(1)}, dy=${dy.toFixed(1)})`)
         count++
       }
@@ -164,6 +189,7 @@ function computeGraphLayout(deals, width, height, focusedNode) {
       return {
         id: c.name,
         company: c,
+        w: nodeWidthFor(c),
         x: width / 2 + Math.cos(angle) * r,
         y: height / 2 + Math.sin(angle) * r,
       }
@@ -177,59 +203,60 @@ function computeGraphLayout(deals, width, height, focusedNode) {
 
   // Separate X/Y forces with weak Y centering — lets nodes spread vertically
   // instead of clustering along a horizontal band.
-  // Collision radius from node diagonal + margin so no two rects overlap.
-  const diag = Math.sqrt((NODE_WIDTH / 2) ** 2 + (NODE_HEIGHT / 2) ** 2)
-  const collideR = diag + 8
-
+  // Per-node collision radius from each node's own diagonal + margin.
   const sim = forceSimulation(nodes)
     .force('link', forceLink(links).id(d => d.id).distance(120).strength(0.5))
     .force('charge', forceManyBody().strength(-1000))
     .force('x', forceX(width / 2).strength(0.05))
     .force('y', forceY(height / 2).strength(0.02))
-    .force('collide', forceCollide().radius(collideR).strength(1).iterations(10))
+    .force('collide', forceCollide()
+      .radius(d => Math.sqrt((d.w / 2) ** 2 + (NODE_HEIGHT / 2) ** 2) + MIN_GAP)
+      .strength(1)
+      .iterations(10))
     .alphaDecay(0.005)
     .velocityDecay(0.4)
     .stop()
 
   for (let i = 0; i < 1000; i++) sim.tick()
 
-  // Rescale node cloud to fill available area with margin (preserves aspect)
+  // Rescale node cloud to fill available area. Use the widest node as the
+  // horizontal guard so the widest cell still fits after scaling.
   const padding = 30
+  const maxNodeW = Math.max(...nodes.map(n => n.w))
   const xs = nodes.map(d => d.x)
   const ys = nodes.map(d => d.y)
   const minX = Math.min(...xs), maxX = Math.max(...xs)
   const minY = Math.min(...ys), maxY = Math.max(...ys)
   const spanX = Math.max(1, maxX - minX)
   const spanY = Math.max(1, maxY - minY)
-  // Independent X/Y scales — stretch the cloud to fill both axes (no aspect
-  // preservation; force sim already determined topology).
-  const scaleX = (width - 2 * padding - NODE_WIDTH) / spanX
+  const scaleX = (width - 2 * padding - maxNodeW) / spanX
   const scaleY = (height - 2 * padding - NODE_HEIGHT) / spanY
   const cx = (minX + maxX) / 2
   const cy = (minY + maxY) / 2
 
-  // Post-rescale placement (top-left corner coords)
+  // Post-rescale placement (top-left corner coords). Clamp per-node width.
   const placed = nodes.map(n => {
     const sx = (n.x - cx) * scaleX + width / 2
     const sy = (n.y - cy) * scaleY + height / 2
     return {
       id: n.id,
       company: n.company,
-      x: Math.max(MARGIN, Math.min(width - MARGIN - NODE_WIDTH, sx - NODE_WIDTH / 2)),
+      w: n.w,
+      x: Math.max(MARGIN, Math.min(width - MARGIN - n.w, sx - n.w / 2)),
       y: Math.max(MARGIN, Math.min(height - MARGIN - NODE_HEIGHT, sy - NODE_HEIGHT / 2)),
     }
   })
 
-  removeAllOverlaps(placed, NODE_WIDTH, NODE_HEIGHT, MIN_GAP, width, height)
+  removeAllOverlaps(placed, NODE_HEIGHT, MIN_GAP, width, height)
 
   const positions = new Map()
-  placed.forEach(p => positions.set(p.id, { x: p.x, y: p.y, company: p.company }))
+  placed.forEach(p => positions.set(p.id, { x: p.x, y: p.y, w: p.w, company: p.company }))
 
   return { positions, visible }
 }
 
 function nodeCenter(pos) {
-  return { x: pos.x + NODE_WIDTH / 2, y: pos.y + NODE_HEIGHT / 2 }
+  return { x: pos.x + pos.w / 2, y: pos.y + NODE_HEIGHT / 2 }
 }
 
 
@@ -448,7 +475,7 @@ export default function Graph({ deals, hoveredEdge, onHoverEdge, hoveredNode, on
           })}
         </g>
         <g>
-          {[...positions.values()].map(({ x, y, company }) => {
+          {[...positions.values()].map(({ x, y, w, company }) => {
             return (
               <g
                 key={company.name}
@@ -463,14 +490,14 @@ export default function Graph({ deals, hoveredEdge, onHoverEdge, hoveredNode, on
               >
                 <rect
                   className={styles.nodeRect}
-                  width={NODE_WIDTH}
+                  width={w}
                   height={NODE_HEIGHT}
                   rx={0}
                   ry={0}
                 />
                 <text
                   className={styles.nodeName}
-                  x={NODE_WIDTH / 2}
+                  x={w / 2}
                   y={NODE_HEIGHT / 2 - 4}
                   textAnchor="middle"
                 >
@@ -479,7 +506,7 @@ export default function Graph({ deals, hoveredEdge, onHoverEdge, hoveredNode, on
                 {company.ticker && (
                   <text
                     className={styles.nodeTicker}
-                    x={NODE_WIDTH / 2}
+                    x={w / 2}
                     y={NODE_HEIGHT / 2 + 10}
                     textAnchor="middle"
                   >
@@ -494,7 +521,7 @@ export default function Graph({ deals, hoveredEdge, onHoverEdge, hoveredNode, on
       {!hoveredNode && hoveredEdgeAggregate && (() => {
         const src = positions.get(hoveredEdge.source)
         const tgt = positions.get(hoveredEdge.target)
-        const midX = src && tgt ? (src.x + NODE_WIDTH / 2 + tgt.x + NODE_WIDTH / 2) / 2 : cursor.x
+        const midX = src && tgt ? (src.x + src.w / 2 + tgt.x + tgt.w / 2) / 2 : cursor.x
         const midY = src && tgt ? (src.y + NODE_HEIGHT / 2 + tgt.y + NODE_HEIGHT / 2) / 2 : cursor.y
         return (
           <DealCard
