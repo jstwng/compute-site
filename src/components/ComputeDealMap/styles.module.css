@@ -13,12 +13,16 @@
 
 .subtitleLink {
   color: var(--text-strong);
+  text-decoration: none;
+}
+
+.subtitleLink > span {
   text-decoration: underline;
   text-decoration-color: var(--link-underline);
   text-underline-offset: 2px;
 }
 
-.subtitleLink:hover { text-decoration-color: var(--text-strong); }
+.subtitleLink:hover > span { text-decoration-color: var(--text-strong); }
 
 /* Top section: description+bars (left) | graph (right) */
 .topSection {
@@ -195,6 +199,7 @@
   height: 100%;
   overflow: visible;
   position: relative;
+  z-index: 100;
   align-self: stretch;
 }
 
