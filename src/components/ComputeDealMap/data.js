@@ -34,3 +34,25 @@ export const DEALS = rawDeals.map(d => {
     source_url: d.source_url,
   }
 })
+
+function parseDateKey(d) {
+  return d.date || ''
+}
+
+export const EARLIEST_DATE = DEALS.reduce(
+  (min, d) => {
+    const k = parseDateKey(d)
+    if (!k) return min
+    return (!min || k < min) ? k : min
+  },
+  ''
+)
+
+export const LATEST_DATE = DEALS.reduce(
+  (max, d) => {
+    const k = parseDateKey(d)
+    if (!k) return max
+    return k > max ? k : max
+  },
+  ''
+)

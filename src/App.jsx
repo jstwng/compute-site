@@ -1,11 +1,30 @@
-import { useMemo, useState, useEffect } from 'react'
+import { useMemo, useState, useEffect, useCallback } from 'react'
 import styles from './components/ComputeDealMap/styles.module.css'
-import { DEALS } from './components/ComputeDealMap/data.js'
-import { applyFilters } from './components/ComputeDealMap/logic.js'
+import { DEALS, EARLIEST_DATE, LATEST_DATE } from './components/ComputeDealMap/data.js'
+import { COMPANIES } from './components/ComputeDealMap/companies.js'
+import {
+  applyFilters,
+  perCompanyAggregates,
+  allShortestPaths,
+  inDateRange,
+  reachableFrom,
+  edgeDealTypes,
+} from './components/ComputeDealMap/logic.js'
+import Toolbar from './components/ComputeDealMap/Toolbar.jsx'
 import FilterBar from './components/ComputeDealMap/FilterBar.jsx'
 import Graph from './components/ComputeDealMap/Graph.jsx'
 import DealTable from './components/ComputeDealMap/DealTable.jsx'
 import SourcesSection from './components/ComputeDealMap/SourcesSection.jsx'
+import ProfilePanel from './components/ComputeDealMap/ProfilePanel.jsx'
+
+const BUILD_DATE_LABEL = (() => {
+  const iso = typeof __BUILD_DATE__ === 'string' ? __BUILD_DATE__ : new Date().toISOString()
+  return new Date(iso)
+    .toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+    .toLowerCase()
+})()
+
+const DEFAULT_TIMELINE = { from: EARLIEST_DATE, to: LATEST_DATE }
 
 export default function App() {
   const [filters, setFilters] = useState({ dealType: 'all', category: 'all', search: '' })
@@ -13,8 +32,256 @@ export default function App() {
   const [hoveredNode, setHoveredNode] = useState(null)
   const [scrollToDealId, setScrollToDealId] = useState(null)
   const [graphMaximized, setGraphMaximized] = useState(false)
+  const [focusedNode, setFocusedNode] = useState(null)
+  const [panelMode, setPanelMode] = useState(null)
+  const [panelKey, setPanelKey] = useState(null)
+  const [counterpartyFilter, setCounterpartyFilter] = useState(null)
+
+  // Three mode-state variables. At most one of trace/timeline/cluster is
+  // active at a time (mutual exclusivity is enforced in the setter wrappers).
+  const [traceOrigin, setTraceOrigin] = useState(null)
+  const [traceDestination, setTraceDestination] = useState(null)
+  // Always points to a specific path index (0..n-1) when paths exist;
+  // 0 by default. There's no "all paths" mode.
+  const [tracePathIndex, setTracePathIndex] = useState(0)
+  const [timelineRange, setTimelineRange] = useState(DEFAULT_TIMELINE)
+  // Multi-select: Set of category slugs currently highlighted as a cluster.
+  const [clusterCategories, setClusterCategories] = useState(() => new Set())
+
+  const handleSearch = useCallback(v => setFilters(f => ({ ...f, search: v })), [])
 
   const filteredDeals = useMemo(() => applyFilters(DEALS, filters), [filters])
+
+  // Trace / Timeline / Cluster are independent — multiple can be active at once.
+  const resetTrace = useCallback(() => {
+    setTraceOrigin(null)
+    setTraceDestination(null)
+    setTracePathIndex(0)
+  }, [])
+
+  const handleChangeTraceOrigin = useCallback(name => {
+    setTraceOrigin(name)
+    setTracePathIndex(0)
+    // If the current destination is no longer reachable from the new origin,
+    // clear it so the dropdown doesn't display a stale invalid value.
+    if (name && traceDestination) {
+      const reachable = reachableFrom(filteredDeals, name)
+      if (!reachable.has(traceDestination)) setTraceDestination(null)
+    }
+  }, [traceDestination, filteredDeals])
+
+  const handleChangeTraceDestination = useCallback(name => {
+    setTraceDestination(name)
+    setTracePathIndex(0)
+  }, [])
+
+  const handleClearTrace = useCallback(() => resetTrace(), [resetTrace])
+
+  const handleChangeTimeline = useCallback(range => {
+    setTimelineRange(range)
+  }, [])
+
+  const handleClearTimeline = useCallback(() => setTimelineRange(DEFAULT_TIMELINE), [])
+
+  const handleToggleCluster = useCallback(category => {
+    setClusterCategories(prev => {
+      const next = new Set(prev)
+      if (next.has(category)) next.delete(category)
+      else next.add(category)
+      return next
+    })
+  }, [])
+
+  const handleClearCluster = useCallback(() => setClusterCategories(new Set()), [])
+
+  const isTimelineActive =
+    timelineRange.from !== EARLIEST_DATE || timelineRange.to !== LATEST_DATE
+
+  const timelineDeals = useMemo(
+    () => isTimelineActive ? inDateRange(filteredDeals, timelineRange.from, timelineRange.to) : filteredDeals,
+    [isTimelineActive, filteredDeals, timelineRange]
+  )
+
+  const activeNodeSet = useMemo(() => {
+    if (!isTimelineActive) return null
+    const set = new Set()
+    for (const d of timelineDeals) {
+      if (d.source) set.add(d.source)
+      if (d.target) set.add(d.target)
+    }
+    return set
+  }, [isTimelineActive, timelineDeals])
+
+  const activeEdgeSet = useMemo(() => {
+    if (!isTimelineActive) return null
+    const set = new Set()
+    for (const d of timelineDeals) set.add(`${d.source}__${d.target}`)
+    return set
+  }, [isTimelineActive, timelineDeals])
+
+  const companyAggregates = useMemo(() => perCompanyAggregates(filteredDeals), [filteredDeals])
+
+  const traceDeals = isTimelineActive ? timelineDeals : filteredDeals
+
+  const reachableFromOrigin = useMemo(
+    () => traceOrigin ? reachableFrom(traceDeals, traceOrigin) : null,
+    [traceOrigin, traceDeals]
+  )
+
+  const tracePaths = useMemo(() => {
+    if (!traceOrigin || !traceDestination) return null
+    if (traceOrigin === traceDestination) return []
+    return allShortestPaths(traceDeals, traceOrigin, traceDestination)
+  }, [traceOrigin, traceDestination, traceDeals])
+
+  const traceReversePaths = useMemo(() => {
+    if (!traceOrigin || !traceDestination) return null
+    if (traceOrigin === traceDestination) return []
+    if (tracePaths && tracePaths.length > 0) return null
+    return allShortestPaths(traceDeals, traceDestination, traceOrigin)
+  }, [traceOrigin, traceDestination, traceDeals, tracePaths])
+
+  const traceNoPath = !!traceOrigin && !!traceDestination &&
+    traceOrigin !== traceDestination && tracePaths && tracePaths.length === 0 &&
+    !(traceReversePaths && traceReversePaths.length > 0)
+  const traceNoPathBoth = traceNoPath && traceReversePaths && traceReversePaths.length === 0
+
+  const swapTrace = useCallback(() => {
+    setTraceOrigin(prevOrigin => {
+      setTraceDestination(prevOrigin)
+      return traceDestination
+    })
+    setTracePathIndex(0)
+  }, [traceDestination])
+
+  // Clamp tracePathIndex into the available paths range so an out-of-bounds
+  // index from a previous selection never breaks rendering.
+  const safePathIndex = (tracePaths && tracePaths.length > 0)
+    ? Math.min(Math.max(tracePathIndex, 0), tracePaths.length - 1)
+    : 0
+
+  const tracePathNodes = useMemo(() => {
+    // If both endpoints are picked but no path exists, still highlight them
+    // — keeps the graph quiet (just two lit nodes) instead of falling back
+    // to the default "everything dim" view.
+    if (!traceOrigin || !traceDestination) return null
+    if (tracePaths && tracePaths.length > 0) {
+      return new Set(tracePaths[safePathIndex])
+    }
+    return new Set([traceOrigin, traceDestination])
+  }, [traceOrigin, traceDestination, tracePaths, safePathIndex])
+
+  const tracePathEdges = useMemo(() => {
+    if (!tracePaths || tracePaths.length === 0) return null
+    const set = new Set()
+    const p = tracePaths[safePathIndex]
+    for (let i = 0; i < p.length - 1; i++) set.add(`${p[i]}__${p[i + 1]}`)
+    return set
+  }, [tracePaths, safePathIndex])
+
+  const clusterHighlightSet = useMemo(() => {
+    if (clusterCategories.size === 0) return null
+    return new Set(
+      COMPANIES.filter(c => clusterCategories.has(c.category)).map(c => c.name)
+    )
+  }, [clusterCategories])
+
+  const clusterHighlightCount = clusterHighlightSet ? clusterHighlightSet.size : 0
+
+  // Deal-type map keyed by "source__target" — Toolbar renders the types
+  // under each hop in the Trace path breakdown.
+  const pathEdgeTypes = useMemo(() => edgeDealTypes(traceDeals), [traceDeals])
+
+  const openCompany = useCallback(name => {
+    setPanelMode('company')
+    setPanelKey(name)
+    setCounterpartyFilter(null)
+  }, [])
+
+  const openDeal = useCallback(edge => {
+    setPanelMode('deal')
+    setPanelKey(`${edge.source}__${edge.target}`)
+  }, [])
+
+  const closePanel = useCallback(() => {
+    setPanelMode(null)
+    setPanelKey(null)
+    setCounterpartyFilter(null)
+  }, [])
+
+  const handleFocusCompany = useCallback(name => {
+    setFocusedNode(name)
+    closePanel()
+  }, [closePanel])
+
+  const panelContent = useMemo(() => {
+    if (!panelMode || !panelKey) return null
+    if (panelMode === 'company') {
+      const company = COMPANIES.find(c => c.name === panelKey)
+      if (!company) return null
+      const relevantDeals = filteredDeals
+        .filter(d => d.source === panelKey || d.target === panelKey)
+        .sort((a, b) => (b.date || '').localeCompare(a.date || ''))
+      const aggregates = companyAggregates.get(panelKey) || {
+        totalDeals: 0,
+        counterparties: new Set(),
+        earliest: null,
+        latest: null,
+        topDealTypes: [],
+      }
+      return {
+        mode: 'company',
+        company,
+        aggregates,
+        deals: relevantDeals,
+        counterpartyFilter,
+        onSetCounterpartyFilter: setCounterpartyFilter,
+      }
+    }
+    if (panelMode === 'deal') {
+      const [src, tgt] = panelKey.split('__')
+      const deals = filteredDeals
+        .filter(d => d.source === src && d.target === tgt)
+        .sort((a, b) => (b.date || '').localeCompare(a.date || ''))
+      if (deals.length === 0) return null
+      return {
+        mode: 'deal',
+        edge: { source: src, target: tgt },
+        deals,
+      }
+    }
+    return null
+  }, [panelMode, panelKey, filteredDeals, companyAggregates, counterpartyFilter])
+
+  const pathDealIds = useMemo(() => {
+    if (!tracePathEdges) return null
+    const set = new Set()
+    for (const d of filteredDeals) {
+      if (tracePathEdges.has(`${d.source}__${d.target}`)) set.add(d.id)
+    }
+    return set
+  }, [tracePathEdges, filteredDeals])
+
+  const tableDeals = useMemo(() => {
+    let base = isTimelineActive ? timelineDeals : filteredDeals
+    if (pathDealIds) base = base.filter(d => pathDealIds.has(d.id))
+    return base
+  }, [isTimelineActive, timelineDeals, filteredDeals, pathDealIds])
+
+  const tableBanner = (() => {
+    if (pathDealIds && tracePaths && tracePaths.length > 0) {
+      const pathLabel = tracePaths.length > 1 ? `Path ${safePathIndex + 1}` : 'the path'
+      return (
+        <>
+          <span>
+            Showing {pathDealIds.size} deal{pathDealIds.size === 1 ? '' : 's'} along {pathLabel} from {traceOrigin} to {traceDestination}
+          </span>
+          <button type="button" className={styles.toolbarPanelLink} onClick={handleClearTrace}>Clear</button>
+        </>
+      )
+    }
+    return null
+  })()
 
   useEffect(() => {
     if (!graphMaximized) return
@@ -28,18 +295,48 @@ export default function App() {
     }
   }, [graphMaximized])
 
+  const tableFilters = { dealType: filters.dealType, category: filters.category }
+  const setTableFilters = next => setFilters(f => ({ ...f, dealType: next.dealType, category: next.category }))
+
   return (
     <div className="computePage">
       <header className="computeHeader">
         <h1 className="computeTitle">ai ecosystem transactions</h1>
         <p className="computeTagline">
-          a structured, source-backed dataset of publicly disclosed ai ecosystem transactions across sovereign AI, hyperscaler capex, custom silicon, and the hardware providers behind them. maintained by justin wang. source data public repository{' '}
+          a structured, source-backed dataset of publicly disclosed ai ecosystem transactions across sovereign AI, hyperscaler capex, custom silicon, and the hardware providers behind them. maintained by justin wang. last updated {BUILD_DATE_LABEL}. source data public repository{' '}
           <a href="https://github.com/jstwng/compute-deal-map-data" target="_blank" rel="noreferrer">here</a>.
         </p>
       </header>
 
+      <Toolbar
+        search={filters.search}
+        onSearch={handleSearch}
+        traceOrigin={traceOrigin}
+        traceDestination={traceDestination}
+        reachableFromOrigin={reachableFromOrigin}
+        tracePaths={tracePaths}
+        tracePathIndex={safePathIndex}
+        traceNoPath={traceNoPath}
+        traceNoPathBoth={traceNoPathBoth}
+        onChangeTraceOrigin={handleChangeTraceOrigin}
+        onChangeTraceDestination={handleChangeTraceDestination}
+        onSwapTrace={swapTrace}
+        onClearTrace={handleClearTrace}
+        onSelectTracePath={setTracePathIndex}
+        timelineFrom={timelineRange.from}
+        timelineTo={timelineRange.to}
+        timelineCount={timelineDeals.length}
+        onChangeTimeline={handleChangeTimeline}
+        onClearTimeline={handleClearTimeline}
+        clusterCategories={clusterCategories}
+        clusterCount={clusterHighlightCount}
+        onToggleCluster={handleToggleCluster}
+        onClearCluster={handleClearCluster}
+        pathEdgeTypes={pathEdgeTypes}
+      />
+
       <section className={styles.section}>
-        <div className="graphBlock">
+        <div className="graphBlock" style={{ position: 'relative' }}>
           <Graph
             deals={filteredDeals}
             hoveredEdge={hoveredEdge}
@@ -48,6 +345,24 @@ export default function App() {
             onHoverNode={setHoveredNode}
             onScrollToRow={id => setScrollToDealId(id)}
             onRequestMaximize={() => setGraphMaximized(true)}
+            onClickNode={openCompany}
+            onClickEdge={openDeal}
+            focusedNode={focusedNode}
+            onFocusChange={setFocusedNode}
+            pathNodes={tracePathNodes}
+            pathEdges={tracePathEdges}
+            dimAll={false}
+            activeNodeSet={activeNodeSet}
+            activeEdgeSet={activeEdgeSet}
+            highlightNodeSet={clusterHighlightSet}
+          />
+          <ProfilePanel
+            content={panelContent}
+            onClose={closePanel}
+            onOpenCompany={openCompany}
+            onScrollToRow={id => setScrollToDealId(id)}
+            onFocusCompany={handleFocusCompany}
+            timelineRange={isTimelineActive ? timelineRange : null}
           />
         </div>
         {graphMaximized && (
@@ -78,12 +393,13 @@ export default function App() {
         )}
 
         <h3 className={styles.sectionSubheader}>Transactions</h3>
-        <FilterBar filters={filters} onChange={setFilters} />
+        <FilterBar filters={tableFilters} onChange={setTableFilters} />
         <DealTable
-          deals={filteredDeals}
+          deals={tableDeals}
           hoveredEdge={hoveredEdge}
           scrollToDealId={scrollToDealId}
           onHoverEdge={setHoveredEdge}
+          banner={tableBanner}
         />
         <SourcesSection />
       </section>

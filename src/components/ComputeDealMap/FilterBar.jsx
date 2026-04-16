@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef } from 'react'
-import styles from './styles.module.css'
 
 const DEAL_TYPE_OPTIONS = [
   { value: 'all',                label: 'All Deals' },
@@ -132,16 +131,6 @@ export default function FilterBar({ filters, onChange }) {
         isOpen={openDropdown === 'category'}
         onToggle={() => setOpenDropdown(openDropdown === 'category' ? null : 'category')}
       />
-      <div style={{ flex: 1 }}>
-        <input
-          type="search"
-          className={styles.filterSearchMinimal}
-          placeholder="Search..."
-          value={filters.search}
-          onChange={e => set({ search: e.target.value })}
-          style={{ width: '100%' }}
-        />
-      </div>
     </div>
   )
 }

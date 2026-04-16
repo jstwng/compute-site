@@ -39,11 +39,14 @@
 .graphBlock {
   height: min(62vh, 560px);
   min-height: 380px;
-  border: 1px solid var(--border);
+  border: 1px solid transparent;
   background: var(--bg);
   margin-bottom: 20px;
   position: relative;
+  transition: border-color 150ms ease;
 }
+
+.graphBlock:hover { border-color: var(--border); }
 
 .computeFooter {
   margin-top: 28px;

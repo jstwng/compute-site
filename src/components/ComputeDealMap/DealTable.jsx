@@ -13,7 +13,7 @@ const COLUMNS = [
   { id: 'source_url',     label: 'Src',        align: 'center' },
 ]
 
-export default function DealTable({ deals, hoveredEdge, scrollToDealId, onHoverEdge }) {
+export default function DealTable({ deals, hoveredEdge, scrollToDealId, onHoverEdge, banner }) {
   const [sort, setSort] = useState({ column: 'value_billions', direction: 'desc' })
   const [flashedId, setFlashedId] = useState(null)
   const [visibleCount, setVisibleCount] = useState(20)
@@ -55,6 +55,7 @@ export default function DealTable({ deals, hoveredEdge, scrollToDealId, onHoverE
 
   return (
     <div className={styles.tableWrap}>
+      {banner && <div className={styles.tableBanner}>{banner}</div>}
       <table className={styles.table}>
         <thead>
           <tr>

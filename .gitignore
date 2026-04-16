@@ -5,3 +5,6 @@ dist
 .env.local
 src/components/ComputeDealMap/data.generated.json
 src/components/ComputeDealMap/companies.generated.json
+
+# Local Netlify folder
+.netlify

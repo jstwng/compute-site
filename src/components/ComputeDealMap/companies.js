@@ -1,12 +1,24 @@
 import raw from './companies.generated.json'
 
 export const CATEGORIES = {
-  chip_designer: { label: 'Chip Designers', fill: '#E8D9B8', border: '#A8893F' },
-  hyperscaler:   { label: 'Hyperscalers',   fill: '#E0DEDA', border: '#8A8A8A' },
-  neocloud:      { label: 'Neoclouds & AI Labs', fill: '#D8D8C8', border: '#7A7A5A' },
-  ai_lab:        { label: 'Neoclouds & AI Labs', fill: '#D8D8C8', border: '#7A7A5A' },
-  data_center:   { label: 'Data Centers',   fill: '#D5D0C8', border: '#8A8A8A' },
-  investor:      { label: 'Investors',      fill: '#E0DEDA', border: '#8A8A8A' },
+  chip_designer: { label: 'Chip designers' },
+  hyperscaler:   { label: 'Hyperscalers' },
+  neocloud:      { label: 'Neoclouds' },
+  ai_lab:        { label: 'AI labs' },
+  data_center:   { label: 'Data centers' },
+  investor:      { label: 'Investors' },
+  memory:        { label: 'Memory' },
+  equipment:     { label: 'Equipment' },
+  networking:    { label: 'Networking' },
+  packaging:     { label: 'Packaging' },
+  power:         { label: 'Power' },
+  server_oem:    { label: 'Server OEMs' },
+}
+
+export function categoryLabel(slug) {
+  if (!slug) return ''
+  return CATEGORIES[slug]?.label ??
+    slug.split('_').filter(w => w.length > 0).map(w => w[0].toUpperCase() + w.slice(1)).join(' ')
 }
 
 export const COMPANIES = raw.map(c => ({

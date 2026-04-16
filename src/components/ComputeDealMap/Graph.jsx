@@ -201,9 +201,6 @@ function computeGraphLayout(deals, width, height, focusedNode) {
 
   if (nodes.length === 0) return { positions: new Map(), visible }
 
-  // Separate X/Y forces with weak Y centering — lets nodes spread vertically
-  // instead of clustering along a horizontal band.
-  // Per-node collision radius from each node's own diagonal + margin.
   const sim = forceSimulation(nodes)
     .force('link', forceLink(links).id(d => d.id).distance(120).strength(0.5))
     .force('charge', forceManyBody().strength(-1000))
@@ -259,11 +256,37 @@ function nodeCenter(pos) {
   return { x: pos.x + pos.w / 2, y: pos.y + NODE_HEIGHT / 2 }
 }
 
+// Trim a line from (cx, cy) in direction (dx, dy) so it exits the rect
+// of half-width halfW and half-height halfH centered at (cx, cy).
+// Returns the boundary intersection point (where the ray exits the rect).
+function rectExit(cx, cy, halfW, halfH, dx, dy) {
+  if (dx === 0 && dy === 0) return { x: cx, y: cy }
+  const tx = dx === 0 ? Infinity : (dx > 0 ? halfW : -halfW) / dx
+  const ty = dy === 0 ? Infinity : (dy > 0 ? halfH : -halfH) / dy
+  const t = Math.min(tx, ty)
+  return { x: cx + dx * t, y: cy + dy * t }
+}
 
-export default function Graph({ deals, hoveredEdge, onHoverEdge, hoveredNode, onHoverNode, onScrollToRow, heightOverride, maximizable = true, onRequestMaximize, onRequestClose, isModal = false }) {
+// Compute the visible segment of an edge between two nodes — clipped to the
+// rectangular outline of each endpoint so the line stops at the rect edge
+// instead of passing through the node interior.
+function edgeSegment(src, tgt) {
+  const a = nodeCenter(src)
+  const b = nodeCenter(tgt)
+  const dx = b.x - a.x
+  const dy = b.y - a.y
+  const aOut = rectExit(a.x, a.y, src.w / 2, NODE_HEIGHT / 2, dx, dy)
+  const bIn = rectExit(b.x, b.y, tgt.w / 2, NODE_HEIGHT / 2, -dx, -dy)
+  return { a: aOut, b: bIn }
+}
+
+
+export default function Graph({ deals, hoveredEdge, onHoverEdge, hoveredNode, onHoverNode, onScrollToRow, heightOverride, maximizable = true, onRequestMaximize, onRequestClose, isModal = false, onClickNode, onClickEdge, focusedNode: focusedNodeProp, onFocusChange, pathNodes, pathEdges, dimAll = false, activeNodeSet, activeEdgeSet, highlightNodeSet }) {
   const [cursor, setCursor] = useState({ x: 0, y: 0 })
   const [cardPinned, setCardPinned] = useState(false)
-  const [focusedNode, setFocusedNode] = useState(null)
+  const [focusedNodeInternal, setFocusedNodeInternal] = useState(null)
+  const focusedNode = focusedNodeProp !== undefined ? focusedNodeProp : focusedNodeInternal
+  const setFocusedNode = onFocusChange ?? setFocusedNodeInternal
   const [hoveringCanvas, setHoveringCanvas] = useState(false)
   const wrapRef = useRef(null)
   const [dims, setDims] = useState({ w: 800, h: 380 })
@@ -350,6 +373,18 @@ export default function Graph({ deals, hoveredEdge, onHoverEdge, hoveredNode, on
       totalValue,
     }
   }, [hoveredEdge, graphDeals])
+
+  // Composable filter predicates. A node is "visible" only when it passes
+  // every active filter; an edge is visible only when both its endpoints
+  // are. Dimmed nodes/edges render at 0.2/0.1 and do NOT respond to hover
+  // or click — pointerEvents is turned off for them.
+  const filterPredicates = []
+  if (pathNodes && pathNodes.size > 0) filterPredicates.push(n => pathNodes.has(n))
+  if (activeNodeSet) filterPredicates.push(n => activeNodeSet.has(n))
+  if (highlightNodeSet && highlightNodeSet.size > 0) filterPredicates.push(n => highlightNodeSet.has(n))
+  const anyFilterActive = filterPredicates.length > 0
+  const isNodeVisible = name => filterPredicates.every(f => f(name))
+  const isEdgeVisible = (s, t) => isNodeVisible(s) && isNodeVisible(t)
 
   return (
     <div
@@ -441,13 +476,24 @@ export default function Graph({ deals, hoveredEdge, onHoverEdge, hoveredNode, on
             const src = positions.get(d.source)
             const tgt = positions.get(d.target)
             if (!src || !tgt) return null
-            const a = nodeCenter(src)
-            const b = nodeCenter(tgt)
+            const { a, b } = edgeSegment(src, tgt)
             const pairKey = `${d.source}__${d.target}`
             const isPairHovered = hoverKey === pairKey
 
+            const edgeVisible = !anyFilterActive || isEdgeVisible(d.source, d.target)
             let opacity, sw
-            if (hoveredNode) {
+            if (anyFilterActive && !edgeVisible) {
+              opacity = 0.1
+              sw = 1
+            } else if (anyFilterActive) {
+              if (isPairHovered) { opacity = 1; sw = 1.75 }
+              else if (hoveredNode && (d.source === hoveredNode || d.target === hoveredNode)) {
+                opacity = 1; sw = 1.75
+              } else { opacity = 0.7; sw = 1 }
+            } else if (dimAll) {
+              opacity = 0.2
+              sw = 1
+            } else if (hoveredNode) {
               const connected = d.source === hoveredNode || d.target === hoveredNode
               opacity = connected ? 1 : 0.10
               sw = connected ? 1.75 : 1
@@ -466,26 +512,45 @@ export default function Graph({ deals, hoveredEdge, onHoverEdge, hoveredNode, on
                 x1={a.x} y1={a.y} x2={b.x} y2={b.y}
                 strokeWidth={sw}
                 opacity={opacity}
-                style={{ transition: 'opacity 150ms ease, stroke-width 150ms ease', cursor: hoveredNode ? 'default' : 'pointer' }}
+                style={{
+                  transition: 'opacity 150ms ease, stroke-width 150ms ease',
+                  cursor: hoveredNode ? 'default' : 'pointer',
+                  pointerEvents: edgeVisible ? 'auto' : 'none',
+                }}
                 aria-label={`${d.source} to ${d.target}: ${d.deal_type}`}
-                onMouseEnter={() => { if (!hoveredNode) onHoverEdge({ source: d.source, target: d.target }) }}
+                onMouseEnter={() => { if (!hoveredNode && edgeVisible) onHoverEdge({ source: d.source, target: d.target }) }}
                 onMouseLeave={() => { if (!hoveredNode) onHoverEdge(null) }}
+                onClick={e => {
+                  e.stopPropagation()
+                  if (edgeVisible && onClickEdge) onClickEdge({ source: d.source, target: d.target })
+                }}
               />
             )
           })}
         </g>
         <g>
           {[...positions.values()].map(({ x, y, w, company }) => {
+            const nodeVisible = !anyFilterActive || isNodeVisible(company.name)
+            let nodeOpacity = 1
+            if (anyFilterActive && !nodeVisible) nodeOpacity = 0.2
+            else if (dimAll) nodeOpacity = 0.2
             return (
               <g
                 key={company.name}
                 transform={`translate(${x}, ${y})`}
-                style={{ transition: 'transform 300ms ease-out', cursor: 'pointer' }}
-                onMouseEnter={() => onHoverNode(company.name)}
+                style={{
+                  transition: 'transform 300ms ease-out, opacity 150ms ease',
+                  cursor: nodeVisible ? 'pointer' : 'default',
+                  opacity: nodeOpacity,
+                  pointerEvents: nodeVisible ? 'auto' : 'none',
+                }}
+                onMouseEnter={() => { if (nodeVisible) onHoverNode(company.name) }}
                 onMouseLeave={() => { if (!cardPinned) onHoverNode(null) }}
                 onClick={e => {
                   e.stopPropagation()
-                  setFocusedNode(company.name === focusedNode ? null : company.name)
+                  if (!nodeVisible) return
+                  if (onClickNode) onClickNode(company.name)
+                  else setFocusedNode(company.name === focusedNode ? null : company.name)
                 }}
               >
                 <rect

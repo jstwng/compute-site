@@ -4,6 +4,550 @@
   gap: 8px;
 }
 
+/* ProfilePanel — right-anchored drill-in panel */
+.profilePanel {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: clamp(280px, 35%, 440px);
+  height: 100%;
+  background: var(--bg);
+  border-left: 1px solid var(--border);
+  padding: 16px;
+  overflow-y: auto;
+  z-index: 30;
+  font-size: 12px;
+  color: var(--text);
+  box-sizing: border-box;
+}
+
+.profilePanelHeader {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 12px;
+}
+
+.profilePanelClose {
+  font: inherit;
+  font-size: 11px;
+  background: transparent;
+  border: none;
+  padding: 4px;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: color 150ms ease;
+}
+.profilePanelClose:hover { color: var(--text); }
+
+.profilePanelBody {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.profileIdentity {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.profileName { font-weight: 600; }
+.profileTicker { color: var(--text-muted); }
+
+.profileMeta {
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+
+.profileFocusLink {
+  font: inherit;
+  font-size: 12px;
+  background: transparent;
+  border: none;
+  padding: 6px 0 0;
+  color: var(--text);
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-color: var(--link-underline);
+  text-underline-offset: 2px;
+}
+.profileFocusLink:hover { text-decoration-color: var(--text-strong); }
+
+.profileJumpRow {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.profileSubhead {
+  font-weight: 600;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.profileClearFilter {
+  font: inherit;
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--text-muted);
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-color: var(--link-underline);
+  text-underline-offset: 2px;
+}
+.profileClearFilter:hover { color: var(--text); }
+
+.profileList, .profileDealList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.profileRow, .profileRowActive {
+  display: flex;
+  justify-content: space-between;
+  padding: 4px 0;
+  cursor: pointer;
+  transition: background 100ms ease;
+}
+.profileRow:hover { background: var(--row-hover); }
+.profileRowActive {
+  background: var(--row-highlight);
+  font-weight: 500;
+}
+.profileRowName { font-weight: 600; }
+.profileRowCount { color: var(--text-muted); }
+
+.profileDealRow {
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border-soft);
+  cursor: pointer;
+  transition: background 100ms ease;
+}
+.profileDealRow:hover { background: var(--row-hover); }
+
+.profileDealMeta {
+  display: flex;
+  gap: 8px;
+  color: var(--text-muted);
+}
+.profileDealCounterparty { color: var(--text); font-weight: 600; }
+.profileDealDesc { margin: 4px 0; }
+.profileDealSource {
+  color: var(--text);
+  text-decoration: underline;
+  text-decoration-color: var(--link-underline);
+  text-underline-offset: 2px;
+}
+
+@media (max-width: 900px) {
+  .profilePanel {
+    position: fixed;
+    top: auto;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    width: 100%;
+    height: 85vh;
+    border-left: none;
+    border-top: 1px solid var(--border);
+    z-index: 1000;
+  }
+}
+
+/* TimelineDock — From/To year dropdowns + deal-count summary, sits inline
+   below the toolbar (same vertical position as TraceStrip) so it's always
+   visible when Timeline is active. */
+.timelineDock {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  height: 44px;
+  padding: 0 16px;
+  margin-bottom: 8px;
+  background: var(--row-highlight);
+  border: 1px solid var(--border);
+  font-size: 12px;
+  color: var(--text);
+}
+
+.timelineDockGroup {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.timelineDockLabel {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.timelineDockMonth {
+  font: inherit;
+  font-size: 12px;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--text);
+  padding: 4px 8px;
+  border-radius: 0;
+  height: 28px;
+  outline: none;
+  cursor: pointer;
+}
+.timelineDockMonth:focus { border-color: var(--text-strong); }
+
+.timelineDockSelect {
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--text);
+  padding: 4px 28px 4px 10px;
+  border-radius: 0;
+  height: 30px;
+  min-width: 84px;
+  outline: none;
+  cursor: pointer;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  background-image: linear-gradient(45deg, transparent 50%, var(--text) 50%),
+                    linear-gradient(135deg, var(--text) 50%, transparent 50%);
+  background-position: calc(100% - 14px) calc(50% - 1px),
+                       calc(100% - 9px) calc(50% - 1px);
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
+}
+.timelineDockSelect:hover { background-color: var(--row-hover); }
+.timelineDockSelect:focus { border-color: var(--text-strong); }
+
+.timelineDockSummary {
+  flex: 1;
+  text-align: right;
+  color: var(--text-muted);
+}
+.timelineDockSummary strong {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.timelineDockReset {
+  font: inherit;
+  font-size: 12px;
+  color: var(--text-muted);
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-color: var(--link-underline);
+  text-underline-offset: 2px;
+}
+.timelineDockReset:hover { color: var(--text); }
+
+@media (max-width: 700px) {
+  .timelineDock {
+    height: auto;
+    padding: 8px 12px;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .timelineDockSummary { flex: 1 1 100%; text-align: left; }
+}
+
+/* Table banner — overlays the transactions table when a filter is active */
+.tableBanner {
+  padding: 6px 8px;
+  margin-bottom: 6px;
+  font-size: 12px;
+  color: var(--text);
+  background: var(--row-highlight);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* TraceStrip — status line + path selector (active when Trace is on) */
+.traceStrip {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 6px 0;
+  margin-bottom: 8px;
+  font-size: 12px;
+  color: var(--text);
+  border-top: 1px solid var(--border-soft);
+  border-bottom: 1px solid var(--border-soft);
+}
+.traceStripRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  min-height: 28px;
+  flex-wrap: wrap;
+}
+
+.traceStripDropdowns {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.traceStripHint {
+  flex: 1;
+  min-width: 0;
+}
+.traceStripHint strong { font-weight: 600; }
+
+.traceStripActions {
+  display: flex;
+  gap: 12px;
+}
+.traceStripLink {
+  font: inherit;
+  font-size: 12px;
+  color: var(--text-muted);
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-color: var(--link-underline);
+  text-underline-offset: 2px;
+}
+.traceStripLink:hover { color: var(--text); }
+
+.traceStripPaths {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.traceStripPathChip,
+.traceStripPathChipActive {
+  font: inherit;
+  font-size: 12px;
+  color: var(--text);
+  background: transparent;
+  border: none;
+  padding: 2px 8px;
+  cursor: pointer;
+  opacity: 0.7;
+  border-bottom: 1px solid transparent;
+}
+.traceStripPathChip { font-weight: 400; }
+.traceStripPathChipActive {
+  font-weight: 500;
+  opacity: 1;
+  border-bottom-color: var(--text);
+}
+.traceStripPathChip:hover { opacity: 1; }
+
+/* Toolbar — search + trace/timeline/cluster dropdowns */
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 16px;
+  width: 100%;
+}
+
+.toolbarSearch {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 27px;
+  border: 1px solid var(--border);
+  background: transparent;
+  padding: 0 8px;
+  font: inherit;
+  font-size: 12px;
+  color: var(--text);
+  border-radius: 0;
+  outline: none;
+}
+.toolbarSearch::placeholder { color: var(--text-faint); }
+.toolbarSearch:focus { border-color: var(--text-muted); }
+
+.toolbarChips {
+  display: flex;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+
+/* Dropdown panel internals shared by Trace + Timeline (custom panels) */
+.toolbarPanelInner {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 6px;
+  font-size: 12px;
+  color: var(--text);
+}
+
+.toolbarPanelRow {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-wrap: nowrap;
+}
+
+/* Path list — inline plain-text path breakdown (no dropdown box). Active path
+   is bold; click to select when multiple paths exist. Multi-edge paths list
+   each hop under the active row. */
+.toolbarPathList {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--text);
+  padding-top: 2px;
+}
+
+.toolbarPathItem {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.toolbarPathRow,
+.toolbarPathRowActive {
+  font: inherit;
+  font-size: 12px;
+  background: transparent;
+  border: none;
+  padding: 0;
+  color: var(--text);
+  text-align: left;
+  white-space: nowrap;
+}
+.toolbarPathRow {
+  cursor: pointer;
+  opacity: 0.7;
+}
+.toolbarPathRow:hover { opacity: 1; }
+.toolbarPathRowActive {
+  font-weight: 600;
+  cursor: default;
+}
+
+.toolbarPathEdges {
+  list-style: none;
+  margin: 0;
+  padding: 0 0 0 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.toolbarPathEdgeHop { color: var(--text-muted); }
+.toolbarPathEdgeType { color: var(--text-faint); }
+
+/* Cluster — multi-select checklist of categories */
+.clusterOptionList {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 300px;
+  overflow-y: auto;
+  min-width: 160px;
+}
+
+.clusterOption,
+.clusterOptionActive {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font: inherit;
+  font-size: 12px;
+  color: var(--text);
+  background: transparent;
+  border: none;
+  padding: 3px 6px;
+  cursor: pointer;
+  text-align: left;
+  white-space: nowrap;
+}
+.clusterOption { font-weight: 400; opacity: 0.7; }
+.clusterOption:hover { opacity: 1; background: rgba(255,255,255,0.06); }
+.clusterOptionActive {
+  font-weight: 600;
+  opacity: 1;
+  background: rgba(255,255,255,0.06);
+}
+.clusterOptionCheck {
+  display: inline-block;
+  width: 10px;
+  text-align: center;
+  color: var(--text);
+}
+
+.toolbarPanelPaths {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.toolbarPanelPathChip,
+.toolbarPanelPathChipActive {
+  font: inherit;
+  font-size: 12px;
+  color: var(--text);
+  background: transparent;
+  border: 1px solid var(--border);
+  padding: 2px 8px;
+  cursor: pointer;
+  border-radius: 0;
+}
+.toolbarPanelPathChip { font-weight: 400; opacity: 0.7; }
+.toolbarPanelPathChipActive {
+  font-weight: 600;
+  opacity: 1;
+  border-color: var(--text);
+}
+.toolbarPanelPathChip:hover { opacity: 1; }
+
+.toolbarPanelActions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  padding-top: 2px;
+}
+
+.toolbarPanelLink {
+  font: inherit;
+  font-size: 12px;
+  color: var(--text);
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-color: var(--link-underline);
+  text-underline-offset: 2px;
+}
+.toolbarPanelLink:hover { color: var(--text-strong); }
+
+@media (max-width: 900px) {
+  .toolbar { gap: 8px; flex-wrap: wrap; }
+  .toolbarChips { flex: 1 1 100%; flex-wrap: wrap; }
+  .toolbarSearch { flex: 1 1 100%; min-width: 0; }
+}
+
 .subtitle {
   font-size: 12px;
   color: var(--text-strong);
@@ -333,6 +877,13 @@
   font-size: 11px;
   font-weight: 400;
   fill: var(--text);
+}
+
+.clusterLabel {
+  font-size: 12px;
+  font-weight: 500;
+  fill: var(--text-muted);
+  pointer-events: none;
 }
 
 /* DealCard */
