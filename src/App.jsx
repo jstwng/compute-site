@@ -309,6 +309,26 @@ export default function App() {
     }
   }, [graphMaximized])
 
+  // Two-state mount so the modal gets both an enter AND an exit
+  // transition. `modalMounted` controls presence in the DOM;
+  // `modalOpen` flips the opacity/scale to their open values. On open
+  // we mount first, then flip open on the next frame so the browser
+  // sees opacity 0 -> 1 as a real transition. On close we flip open
+  // off immediately, wait for the transition, then unmount.
+  const [modalMounted, setModalMounted] = useState(false)
+  const [modalOpen, setModalOpen] = useState(false)
+
+  useEffect(() => {
+    if (graphMaximized) {
+      setModalMounted(true)
+      const raf = requestAnimationFrame(() => setModalOpen(true))
+      return () => cancelAnimationFrame(raf)
+    }
+    setModalOpen(false)
+    const t = setTimeout(() => setModalMounted(false), 220)
+    return () => clearTimeout(t)
+  }, [graphMaximized])
+
   const tableFilters = { dealType: filters.dealType, category: filters.category }
   const setTableFilters = next => setFilters(f => ({ ...f, dealType: next.dealType, category: next.category }))
 
@@ -389,9 +409,9 @@ export default function App() {
             timelineRange={isTimelineActive ? timelineRange : null}
           />
         </div>
-        {graphMaximized && (
+        {modalMounted && (
           <div
-            className={styles.graphModalBackdrop}
+            className={`${styles.graphModalBackdrop}${modalOpen ? ' ' + styles.graphModalBackdropOpen : ''}`}
             role="dialog"
             aria-modal="true"
             aria-label="Expanded graph view"

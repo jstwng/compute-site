@@ -869,6 +869,11 @@
 .graphExpandHint:hover { color: var(--text); }
 .graphExpandIcon { display: block; flex-shrink: 0; }
 
+/* Two-step mount pattern in App.jsx: the modal renders with the base
+   class (opacity 0, frame scale 0.985), then on the next frame the
+   `graphModalBackdropOpen` class is added so the transition animates
+   from 0 -> 1. On close, the open class is removed and the base
+   transition plays in reverse before the modal unmounts. */
 .graphModalBackdrop {
   position: fixed;
   inset: 0;
@@ -878,8 +883,11 @@
   align-items: center;
   justify-content: center;
   padding: 40px;
-  animation: graphModalFade 150ms ease;
+  opacity: 0;
+  transition: opacity 200ms ease;
 }
+
+.graphModalBackdropOpen { opacity: 1; }
 
 .graphModalFrame {
   position: relative;
@@ -890,13 +898,11 @@
   border: 1px solid var(--border);
   display: flex;
   overflow: hidden;
+  transform: scale(0.985);
+  transition: transform 220ms cubic-bezier(0.4, 0, 0.2, 1);
 }
+.graphModalBackdropOpen .graphModalFrame { transform: scale(1); }
 .graphModalFrame > div { flex: 1; height: 100%; }
-
-@keyframes graphModalFade {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
 
 .legendLabel {
   font-size: 11px;

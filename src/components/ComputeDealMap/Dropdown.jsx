@@ -163,7 +163,7 @@ export default function Dropdown({
                   }}
                 />
               )}
-              <div style={{ maxHeight: panelMaxHeight, overflowY: 'auto' }}>
+              <div style={{ maxHeight: panelMaxHeight, overflowY: 'auto', padding: '4px 0' }}>
                 {filtered.length === 0 ? (
                   <div style={{
                     padding: '8px 10px',

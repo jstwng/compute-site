@@ -50,6 +50,7 @@ function DropdownFilter({ label, options, value, onChange, isOpen, onToggle }) {
           top: '100%',
           left: 0,
           marginTop: 0,
+          padding: '4px 0',
           border: '1px solid var(--border)',
           background: 'var(--bg, #000)',
           zIndex: 1000,
