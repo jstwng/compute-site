@@ -76,6 +76,9 @@
 
 @media (max-width: 767px) {
   .computePage { padding: 12px 12px 24px; }
+  /* On mobile the panel is a bottom sheet, not a right-edge drawer, so
+     don't shift the page horizontally. */
+  .computePage.panelOpen { padding-right: 12px; }
   .graphBlock { height: min(46vh, 420px); min-height: 300px; }
   .computeTagline {
     font-size: 13px;
@@ -103,4 +106,5 @@
     text-underline-offset: 2px;
     cursor: pointer;
   }
+  .computeFooter { font-size: 12px; padding-top: 24px; }
 }
