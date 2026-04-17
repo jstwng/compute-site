@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react'
 import styles from './styles.module.css'
 import { DEAL_TYPES } from './data.js'
 import { sortDeals } from './logic.js'
+import useMediaQuery from './useMediaQuery.js'
+import DealCard from './DealCard.jsx'
 
 const PAGE_SIZE = 20
 
@@ -19,6 +21,8 @@ export default function DealTable({ deals, hoveredEdge, scrollToDealId, onHoverE
   const [sort, setSort] = useState({ column: 'value_billions', direction: 'desc' })
   const [flashedId, setFlashedId] = useState(null)
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
+
+  const isMobile = useMediaQuery('(max-width: 767px)')
 
   const sorted = useMemo(() => sortDeals(deals, sort), [deals, sort])
   const visible = sorted.slice(0, visibleCount)
@@ -50,101 +54,139 @@ export default function DealTable({ deals, hoveredEdge, scrollToDealId, onHoverE
   return (
     <div className={styles.tableWrap}>
       {banner && <div className={styles.tableBanner}>{banner}</div>}
-      <table className={styles.table}>
-        <thead>
-          <tr>
-            {COLUMNS.map(c => (
-              <th
-                key={c.id}
-                onClick={() => toggleSort(c.id)}
-                onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') toggleSort(c.id) }}
-                data-align={c.align}
-                tabIndex={0}
-                scope="col"
-                aria-sort={sort.column === c.id ? (sort.direction === 'asc' ? 'ascending' : 'descending') : 'none'}
-                style={{
-                  ...(c.width ? { width: c.width } : {}),
-                  ...(c.nowrap ? { whiteSpace: 'nowrap' } : {}),
-                }}
-              >
-                {c.label}
-                {sort.column === c.id && (
-                  <span className={styles.sortIndicator}>
-                    {sort.direction === 'asc' ? ' \u2191' : ' \u2193'}
-                  </span>
-                )}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
+      {isMobile && (
+        <div className={styles.dealCardList}>
+          {/* Mobile sort picker */}
+          <div className={styles.dealCardListSort}>
+            <label htmlFor="deal-sort" className={styles.dealCardListSortLabel}>Sort</label>
+            <select
+              id="deal-sort"
+              className={styles.dealCardListSortSelect}
+              value={`${sort.column}:${sort.direction}`}
+              onChange={(e) => {
+                const [column, direction] = e.target.value.split(':')
+                setSort({ column, direction })
+              }}
+            >
+              <option value="value_billions:desc">Value (high to low)</option>
+              <option value="value_billions:asc">Value (low to high)</option>
+              <option value="date:desc">Date (newest)</option>
+              <option value="date:asc">Date (oldest)</option>
+              <option value="source:asc">Source (A to Z)</option>
+            </select>
+          </div>
           {visible.map(d => {
             const dealKey = `${d.source}__${d.target}`
             const highlighted = hoverKey === dealKey
-            const flashing = flashedId === d.id
-            const type = DEAL_TYPES[d.deal_type]
-            const description = d.description?.endsWith('.') ? d.description : `${d.description ?? ''}.`
             return (
-              <tr
+              <DealCard
                 key={d.id}
-                data-deal-id={d.id}
-                className={[
-                  flashing ? styles.flashRow : '',
-                  highlighted ? styles.highlighted : '',
-                  styles.clickableRow,
-                ].filter(Boolean).join(' ')}
-                onMouseEnter={() => onHoverEdge?.({ source: d.source, target: d.target })}
-                onMouseLeave={() => onHoverEdge?.(null)}
-                onClick={() => onClickDeal?.({ source: d.source, target: d.target })}
-              >
-                <td>
-                  {onClickCompany ? (
-                    <span
-                      className={styles.companyNameLink}
-                      onClick={e => { e.stopPropagation(); onClickCompany(d.source) }}
-                      role="button"
-                      tabIndex={0}
-                      onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); onClickCompany(d.source) } }}
-                    >
-                      {d.source}
-                    </span>
-                  ) : d.source}
-                </td>
-                <td>
-                  {d.source === d.target ? <span className={styles.fundingDash}>—</span> : (
-                    onClickCompany ? (
-                      <span
-                        className={styles.companyNameLink}
-                        onClick={e => { e.stopPropagation(); onClickCompany(d.target) }}
-                        role="button"
-                        tabIndex={0}
-                        onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); onClickCompany(d.target) } }}
-                      >
-                        {d.target}
-                      </span>
-                    ) : d.target
-                  )}
-                </td>
-                <td>
-                  <span className={styles.dealTypePill}>
-                    {type.label}
-                  </span>
-                </td>
-                <td className={styles.valueCell}>{d.value_display}</td>
-                <td>{d.date_display}</td>
-                <td className={styles.descCell}>
-                  <div className={styles.descTextTruncated}>
-                    {description}
-                  </div>
-                </td>
-                <td style={{ textAlign: 'center' }} onClick={e => e.stopPropagation()}>
-                  <a className={styles.sourceLink} href={d.source_url} target="_blank" rel="noreferrer">↗</a>
-                </td>
-              </tr>
+                deal={d}
+                highlighted={highlighted}
+                onClickDeal={onClickDeal}
+                onClickCompany={onClickCompany}
+              />
             )
           })}
-        </tbody>
-      </table>
+        </div>
+      )}
+      {!isMobile && (
+        <table className={styles.table}>
+          <thead>
+            <tr>
+              {COLUMNS.map(c => (
+                <th
+                  key={c.id}
+                  onClick={() => toggleSort(c.id)}
+                  onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') toggleSort(c.id) }}
+                  data-align={c.align}
+                  tabIndex={0}
+                  scope="col"
+                  aria-sort={sort.column === c.id ? (sort.direction === 'asc' ? 'ascending' : 'descending') : 'none'}
+                  style={{
+                    ...(c.width ? { width: c.width } : {}),
+                    ...(c.nowrap ? { whiteSpace: 'nowrap' } : {}),
+                  }}
+                >
+                  {c.label}
+                  {sort.column === c.id && (
+                    <span className={styles.sortIndicator}>
+                      {sort.direction === 'asc' ? ' \u2191' : ' \u2193'}
+                    </span>
+                  )}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {visible.map(d => {
+              const dealKey = `${d.source}__${d.target}`
+              const highlighted = hoverKey === dealKey
+              const flashing = flashedId === d.id
+              const type = DEAL_TYPES[d.deal_type]
+              const description = d.description?.endsWith('.') ? d.description : `${d.description ?? ''}.`
+              return (
+                <tr
+                  key={d.id}
+                  data-deal-id={d.id}
+                  className={[
+                    flashing ? styles.flashRow : '',
+                    highlighted ? styles.highlighted : '',
+                    styles.clickableRow,
+                  ].filter(Boolean).join(' ')}
+                  onMouseEnter={() => onHoverEdge?.({ source: d.source, target: d.target })}
+                  onMouseLeave={() => onHoverEdge?.(null)}
+                  onClick={() => onClickDeal?.({ source: d.source, target: d.target })}
+                >
+                  <td>
+                    {onClickCompany ? (
+                      <span
+                        className={styles.companyNameLink}
+                        onClick={e => { e.stopPropagation(); onClickCompany(d.source) }}
+                        role="button"
+                        tabIndex={0}
+                        onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); onClickCompany(d.source) } }}
+                      >
+                        {d.source}
+                      </span>
+                    ) : d.source}
+                  </td>
+                  <td>
+                    {d.source === d.target ? <span className={styles.fundingDash}>—</span> : (
+                      onClickCompany ? (
+                        <span
+                          className={styles.companyNameLink}
+                          onClick={e => { e.stopPropagation(); onClickCompany(d.target) }}
+                          role="button"
+                          tabIndex={0}
+                          onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); onClickCompany(d.target) } }}
+                        >
+                          {d.target}
+                        </span>
+                      ) : d.target
+                    )}
+                  </td>
+                  <td>
+                    <span className={styles.dealTypePill}>
+                      {type.label}
+                    </span>
+                  </td>
+                  <td className={styles.valueCell}>{d.value_display}</td>
+                  <td>{d.date_display}</td>
+                  <td className={styles.descCell}>
+                    <div className={styles.descTextTruncated}>
+                      {description}
+                    </div>
+                  </td>
+                  <td style={{ textAlign: 'center' }} onClick={e => e.stopPropagation()}>
+                    <a className={styles.sourceLink} href={d.source_url} target="_blank" rel="noreferrer">↗</a>
+                  </td>
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
+      )}
       {sorted.length > 0 && (
         <div style={{
           display: 'flex',

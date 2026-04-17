@@ -1175,3 +1175,31 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+.dealCardList {
+  display: flex;
+  flex-direction: column;
+}
+.dealCardListSort {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 0;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+.dealCardListSortLabel {
+  font-weight: 600;
+  color: var(--text);
+}
+.dealCardListSortSelect {
+  flex: 1 1 auto;
+  height: 40px;
+  padding: 0 8px;
+  font: inherit;
+  font-size: 14px;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 0;
+}
