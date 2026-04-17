@@ -1,8 +1,7 @@
-import { useMemo, useState } from 'react'
+import { Fragment, useMemo, useState } from 'react'
 import styles from './styles.module.css'
 import { DEALS } from './data'
 import useMediaQuery from './useMediaQuery.js'
-import SourceCard from './SourceCard.jsx'
 
 // Domain → publisher label. Anything not listed falls back to the bare hostname.
 const PUBLISHER = {
@@ -124,6 +123,12 @@ const COLUMNS = [
   { id: 'link',    label: 'Link',             width: '40px',  align: 'center' },
 ]
 
+const MOBILE_COLUMNS = [
+  { id: 'source',  label: 'Source',  nowrap: true },
+  { id: 'article', label: 'Article'               },
+  { id: 'date',    label: 'Date',    nowrap: true, align: 'right' },
+]
+
 export default function SourcesSection() {
   const [sort, setSort] = useState({ column: 'date', direction: 'desc' })
   const [visibleCount, setVisibleCount] = useState(20)
@@ -232,11 +237,69 @@ export default function SourcesSection() {
           </table>
         )}
         {isMobile && (
-          <div className={styles.sourceCardList}>
-            {visible.map(r => (
-              <SourceCard key={r.n} row={r} />
-            ))}
-          </div>
+          <>
+            <div className={styles.mobileTableHint}>tap a row to expand</div>
+            <table className={styles.mobileTable}>
+              <thead>
+                <tr>
+                  {MOBILE_COLUMNS.map(c => (
+                    <th
+                      key={c.id}
+                      onClick={() => toggleSort(c.id)}
+                      onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') toggleSort(c.id) }}
+                      data-align={c.align}
+                      tabIndex={0}
+                      scope="col"
+                      aria-sort={sort.column === c.id ? (sort.direction === 'asc' ? 'ascending' : 'descending') : 'none'}
+                      style={{ ...(c.nowrap ? { whiteSpace: 'nowrap' } : {}) }}
+                    >
+                      {c.label}
+                      {sort.column === c.id && (
+                        <span className={styles.sortIndicator}>
+                          {sort.direction === 'asc' ? ' \u2191' : ' \u2193'}
+                        </span>
+                      )}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {visible.map(r => {
+                  const expanded = expandedIds.has(r.n)
+                  return (
+                    <Fragment key={r.n}>
+                      <tr
+                        className={styles.clickableRow}
+                        onClick={() => toggleExpanded(r.n)}
+                      >
+                        <td>{r.source}</td>
+                        <td>{r.article}</td>
+                        <td className={styles.valueCell}>{r.date}</td>
+                      </tr>
+                      {expanded && (
+                        <tr className={styles.mobileTableExpandRow}>
+                          <td colSpan={MOBILE_COLUMNS.length} className={styles.mobileTableExpandCell}>
+                            <div className={styles.mobileTableExpandMeta}>
+                              <span>{r.deals}</span>
+                              {r.url && (
+                                <a
+                                  className={styles.sourceLink}
+                                  href={r.url}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  onClick={e => e.stopPropagation()}
+                                >↗</a>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </Fragment>
+                  )
+                })}
+              </tbody>
+            </table>
+          </>
         )}
         {sorted.length > 0 && (
           <div style={{

@@ -219,16 +219,19 @@
     display: block;
     width: 40px;
     height: 4px;
-    margin: 6px auto 8px;
+    margin: 4px auto 2px;
     background: var(--border);
   }
-  .profilePanelClose {
-    min-width: 44px;
-    min-height: 44px;
-    padding: 10px 12px;
-    font-size: 14px;
+  .profilePanelHeader {
+    margin-bottom: 2px;
   }
-  .profileDescription { font-size: 14px; }
+  .profilePanelClose {
+    padding: 4px 6px;
+    font-size: 11px;
+  }
+  .profilePanelBody {
+    gap: 10px;
+  }
 }
 
 /* Hide the drag bar on desktop. */
@@ -539,28 +542,25 @@
 @media (max-width: 767px) {
   .toolbar {
     flex-wrap: wrap;
-    gap: 8px;
+    gap: 6px;
   }
   .toolbarSearch {
     flex: 1 1 100%;
     min-width: 0;
-    height: 40px;
-    font-size: 14px;
     order: 1;
   }
   .toolbarChips {
     flex: 1 1 100%;
-    display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
-    gap: 4px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
     order: 2;
   }
-  .toolbarChips > * { width: 100%; }
+  .toolbarChips > * { width: auto; }
   .toolbarChips button {
-    height: 40px;
-    width: 100%;
+    height: auto;
+    width: auto;
     justify-content: flex-start;
-    font-size: 13px;
   }
 }
 
@@ -1178,7 +1178,6 @@
   font-size: 11px;
   color: var(--text-muted);
   padding: 2px 4px 6px;
-  font-style: italic;
 }
 
 /* Mobile transactions table — compact 4-col variant of .table. Shares the
@@ -1361,23 +1360,21 @@
 .mobileFilterBody .clusterOption,
 .mobileFilterBody .clusterOptionActive {
   font-size: 14px;
-  padding: 8px 6px;
+  padding: 4px 6px;
 }
 
 .toolbarMobileChip {
-  height: 40px;
+  height: 27px;
   padding: 0 8px;
   border: 1px solid var(--border);
   background: transparent;
   color: var(--text);
   font: inherit;
-  font-size: 13px;
-  display: flex;
+  font-size: 12px;
+  display: inline-flex;
   align-items: center;
   gap: 6px;
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
   cursor: pointer;
 }
 

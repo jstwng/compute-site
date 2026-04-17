@@ -21,10 +21,13 @@ describe('SourcesSection responsive mode', () => {
     expect(screen.getByText('Article / Report')).toBeInTheDocument()
   })
 
-  it('renders the card list on mobile (no Article / Report header)', () => {
+  it('renders a compact mobile table (Source / Article / Date) with no extra columns', () => {
     mockMatchMedia(true)
     render(<SourcesSection />)
     expect(screen.getByText('Data Sources')).toBeInTheDocument()
     expect(screen.queryByText('Article / Report')).toBeNull()
+    expect(screen.queryByText('Deals Referenced')).toBeNull()
+    // Mobile header says just "Article"
+    expect(screen.getByText('Article')).toBeInTheDocument()
   })
 })

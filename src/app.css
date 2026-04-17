@@ -43,8 +43,8 @@
 }
 
 .computeTitleBy a:hover {
-  color: var(--text);
-  text-decoration-color: var(--text);
+  color: #B0B0B0;
+  text-decoration-color: #B0B0B0;
 }
 
 .computeTagline {
@@ -126,18 +126,13 @@
     cursor: pointer;
   }
   .computeFooter { font-size: 12px; padding-top: 24px; }
-  /* Stretch the two FilterBar fields to split the full row width on mobile
-     so they read as a single row of the transactions table's filter strip. */
+  /* FilterBar on mobile — fields size to their content, matching the
+     proportional Trace/Timeline/Cluster chip pattern above them. */
   .filterBar {
-    display: grid !important;
-    grid-template-columns: 1fr 1fr;
-    gap: 4px !important;
+    flex-wrap: wrap;
+    gap: 6px !important;
   }
-  .filterBarField { width: 100%; }
   .filterBarButton {
-    width: 100%;
-    height: 40px !important;
     padding-right: 8px !important;
-    font-size: 13px !important;
   }
 }

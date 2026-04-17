@@ -76,14 +76,14 @@ export default function Dropdown({
           value={value ?? ''}
           onChange={(e) => onChange(e.target.value)}
           style={{
-            height: '40px',
+            height: '27px',
             minWidth: '120px',
-            fontSize: '14px',
+            fontSize: '12px',
             color: 'var(--text)',
             background: 'var(--bg)',
             border: '1px solid var(--border)',
             borderRadius: 0,
-            padding: '0 10px',
+            padding: '0 8px',
             fontFamily: 'inherit',
             appearance: 'none',
             WebkitAppearance: 'none',
