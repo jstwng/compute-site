@@ -124,13 +124,23 @@
     cursor: pointer;
   }
   .computeFooter { font-size: 12px; padding-top: 24px; }
-  /* FilterBar on mobile — fields size to their content, matching the
-     proportional Trace/Timeline/Cluster chip pattern above them. */
+  /* FilterBar on mobile — fields share the full row 50/50, matching the
+     proportional Trace/Timeline/Cluster chip pattern above. */
   .filterBar {
-    flex-wrap: wrap;
+    display: grid !important;
+    grid-template-columns: 1fr 1fr;
     gap: 6px !important;
   }
+  .filterBarField { width: 100%; }
   .filterBarButton {
+    width: 100%;
+    height: 36px !important;
     padding-right: 8px !important;
+    font-size: 13px !important;
+    -webkit-tap-highlight-color: transparent;
   }
 }
+
+/* Globally kill iOS Safari's default blue tap highlight — Justin's mobile
+   pass is all on dark mode and the blue flash reads loud. */
+a, button { -webkit-tap-highlight-color: transparent; }

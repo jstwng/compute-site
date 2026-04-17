@@ -188,6 +188,8 @@
     right: 0;
     width: 100%;
     height: 50vh;
+    padding: 12px 14px 16px;
+    font-size: 14px;
     border-left: none;
     border-top: 1px solid var(--border);
     transform: translateY(100%);
@@ -219,19 +221,42 @@
     display: block;
     width: 40px;
     height: 4px;
-    margin: 4px auto 2px;
+    margin: 0 auto;
     background: var(--border);
+    align-self: center;
   }
   .profilePanelHeader {
-    margin-bottom: 2px;
+    position: sticky;
+    top: 0;
+    z-index: 3;
+    background: var(--bg);
+    margin-bottom: 4px;
+    padding: 2px 0 4px;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 2px;
   }
+  .profilePanelClose { align-self: flex-end; }
   .profilePanelClose {
-    padding: 4px 6px;
-    font-size: 11px;
+    padding: 2px 4px;
+    font-size: 13px;
   }
   .profilePanelBody {
-    gap: 10px;
+    gap: 8px;
   }
+  /* Kill every standalone horizontal rule + row divider inside the
+     mobile panel. */
+  .profilePanelDivider { display: none; }
+  .profileDealRow { border-bottom: none; padding: 4px 0; }
+  .profileMeta,
+  .profileSubhead,
+  .profileDealMeta,
+  .profileDealDesc,
+  .profileDescription { font-size: 14px; }
+  /* Drag bar sits ABOVE the sticky header — pull it into the sticky
+     header's padding area so scroll doesn't leave it behind. */
+  .profilePanelDragBar { margin-top: 0; }
 }
 
 /* Hide the drag bar on desktop. */
@@ -547,20 +572,23 @@
   .toolbarSearch {
     flex: 1 1 100%;
     min-width: 0;
+    height: 36px;
+    font-size: 13px;
     order: 1;
   }
   .toolbarChips {
     flex: 1 1 100%;
-    display: flex;
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
     gap: 6px;
     order: 2;
   }
-  .toolbarChips > * { width: auto; }
+  .toolbarChips > * { width: 100%; }
   .toolbarChips button {
-    height: auto;
-    width: auto;
+    width: 100%;
+    height: 36px;
     justify-content: flex-start;
+    font-size: 13px;
   }
 }
 
@@ -1407,18 +1435,21 @@
 }
 
 .toolbarMobileChip {
-  height: 27px;
+  height: 36px;
   padding: 0 8px;
   border: 1px solid var(--border);
   background: transparent;
   color: var(--text);
   font: inherit;
-  font-size: 12px;
-  display: inline-flex;
+  font-size: 13px;
+  display: flex;
   align-items: center;
   gap: 6px;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
 }
 
 @media (max-width: 767px) {

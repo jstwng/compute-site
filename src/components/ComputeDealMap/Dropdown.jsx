@@ -55,10 +55,9 @@ export default function Dropdown({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen])
 
-  // Two-state mount so the panel fades + slides on BOTH open and close.
-  // `panelMounted` keeps it in the DOM during the exit transition;
-  // `panelVisible` drives opacity/transform. On open, mount then flip
-  // visible on rAF so the transition runs 0 -> 1 instead of snapping.
+  // Two-state mount. Panel transition matches the .rowEnter animation
+  // used for expand/collapse table rows: opacity 0 -> 1 with a small
+  // translateY(-4px) settle, 260ms ease.
   const [panelMounted, setPanelMounted] = useState(false)
   const [panelVisible, setPanelVisible] = useState(false)
   useEffect(() => {
@@ -68,7 +67,7 @@ export default function Dropdown({
       return () => cancelAnimationFrame(raf)
     }
     setPanelVisible(false)
-    const t = setTimeout(() => setPanelMounted(false), 180)
+    const t = setTimeout(() => setPanelMounted(false), 260)
     return () => clearTimeout(t)
   }, [isOpen])
 
@@ -158,8 +157,7 @@ export default function Dropdown({
             flexDirection: 'column',
             opacity: panelVisible ? 1 : 0,
             transform: `translateY(${panelVisible ? 0 : -4}px)`,
-            transformOrigin: 'top',
-            transition: 'opacity 160ms ease, transform 180ms cubic-bezier(0.4, 0, 0.2, 1)',
+            transition: 'opacity 260ms ease, transform 260ms ease',
             pointerEvents: panelVisible ? 'auto' : 'none',
           }}
         >

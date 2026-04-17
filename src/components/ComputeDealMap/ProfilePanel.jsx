@@ -67,8 +67,8 @@ export default function ProfilePanel({
         role="complementary"
         aria-hidden={!isOpen}
       >
-        <div className={styles.profilePanelDragBar} aria-hidden="true" />
         <div className={styles.profilePanelHeader}>
+          <div className={styles.profilePanelDragBar} aria-hidden="true" />
           <button type="button" className={styles.profilePanelClose} onClick={onClose}>
             Close
           </button>
