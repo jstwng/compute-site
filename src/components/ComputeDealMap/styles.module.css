@@ -1250,3 +1250,61 @@
   display: flex;
   flex-direction: column;
 }
+
+.mobileFilterBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1100;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: flex-end;
+  animation: mobileFilterBackdropFade 200ms ease;
+}
+@keyframes mobileFilterBackdropFade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.mobileFilterSheet {
+  width: 100%;
+  max-height: 85vh;
+  background: var(--bg);
+  border-top: 1px solid var(--border);
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  animation: mobileFilterSheetSlideUp 220ms ease;
+}
+@keyframes mobileFilterSheetSlideUp {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+.mobileFilterHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+}
+.mobileFilterTitle {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-strong);
+}
+.mobileFilterDone {
+  font: inherit;
+  font-size: 14px;
+  color: var(--text);
+  background: transparent;
+  border: none;
+  padding: 8px 4px;
+  min-height: 44px;
+  cursor: pointer;
+}
+.mobileFilterBody {
+  padding: 16px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
