@@ -35,13 +35,17 @@
 }
 
 .computeTitleBy a {
-  color: var(--text-strong);
+  color: inherit;
   text-decoration: underline;
   text-decoration-color: var(--link-underline);
   text-underline-offset: 2px;
+  transition: color 150ms ease;
 }
 
-.computeTitleBy a:hover { text-decoration-color: var(--text-strong); }
+.computeTitleBy a:hover {
+  color: var(--text);
+  text-decoration-color: var(--text);
+}
 
 .computeTagline {
   font-size: 12px;
