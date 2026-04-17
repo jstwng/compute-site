@@ -61,8 +61,6 @@
   text-underline-offset: 2px;
 }
 
-@media (max-width: 720px) {
+@media (max-width: 767px) {
   .computePage { padding: 12px 12px 24px; }
-  .computeTitle { font-size: 12px; }
-  .graphBlock { height: 56vh; min-height: 320px; }
 }
