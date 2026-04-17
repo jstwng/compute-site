@@ -4,6 +4,33 @@ import { DEAL_TYPES } from './data.js'
 import { sortDeals } from './logic.js'
 import useMediaQuery from './useMediaQuery.js'
 
+// Mounts while isOpen is true, then stays mounted for the exit animation
+// so close is animated just like open. Mirror of the ProfilePanel pattern.
+function MobileExpandRow({ isOpen, colSpan, children }) {
+  const [mounted, setMounted] = useState(isOpen)
+  const [visible, setVisible] = useState(false)
+  useEffect(() => {
+    if (isOpen) {
+      setMounted(true)
+      const raf = requestAnimationFrame(() => setVisible(true))
+      return () => cancelAnimationFrame(raf)
+    }
+    setVisible(false)
+    const t = setTimeout(() => setMounted(false), 240)
+    return () => clearTimeout(t)
+  }, [isOpen])
+  if (!mounted) return null
+  return (
+    <tr className={styles.mobileTableExpandRow}>
+      <td colSpan={colSpan} className={styles.mobileTableExpandCell}>
+        <div className={`${styles.mobileTableExpandInner} ${visible ? styles.mobileTableExpandInnerOpen : ''}`}>
+          {children}
+        </div>
+      </td>
+    </tr>
+  )
+}
+
 const PAGE_SIZE = 20
 
 const COLUMNS = [
@@ -27,7 +54,8 @@ export default function DealTable({ deals, hoveredEdge, scrollToDealId, onHoverE
   const [sort, setSort] = useState({ column: 'date', direction: 'desc' })
   const [flashedId, setFlashedId] = useState(null)
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
-  const [expandedIds, setExpandedIds] = useState(() => new Set())
+  // Single-open: clicking another row closes the previous one.
+  const [expandedId, setExpandedId] = useState(null)
 
   const isMobile = useMediaQuery('(max-width: 767px)')
 
@@ -36,11 +64,7 @@ export default function DealTable({ deals, hoveredEdge, scrollToDealId, onHoverE
   const hoverKey = hoveredEdge ? `${hoveredEdge.source}__${hoveredEdge.target}` : null
 
   const toggleExpanded = (id) => {
-    setExpandedIds(prev => {
-      const next = new Set(prev)
-      if (next.has(id)) next.delete(id); else next.add(id)
-      return next
-    })
+    setExpandedId(prev => (prev === id ? null : id))
   }
 
   useEffect(() => {
@@ -107,7 +131,7 @@ export default function DealTable({ deals, hoveredEdge, scrollToDealId, onHoverE
             const dealKey = `${d.source}__${d.target}`
             const highlighted = hoverKey === dealKey
             const flashing = flashedId === d.id
-            const expanded = expandedIds.has(d.id)
+            const expanded = expandedId === d.id
             const descClass = expanded ? styles.descTextExpanded : styles.descTextTruncated
             const type = DEAL_TYPES[d.deal_type]
             const description = d.description?.endsWith('.') ? d.description : `${d.description ?? ''}.`
@@ -131,25 +155,21 @@ export default function DealTable({ deals, hoveredEdge, scrollToDealId, onHoverE
                     <td className={styles.valueCell}>{d.value_display}</td>
                     <td className={styles.valueCell}>{d.date_display}</td>
                   </tr>
-                  {expanded && (
-                    <tr className={styles.mobileTableExpandRow}>
-                      <td colSpan={MOBILE_COLUMNS.length} className={styles.mobileTableExpandCell}>
-                        <div className={styles.mobileTableExpandMeta}>
-                          {type && <span className={styles.dealTypePill}>{type.label}</span>}
-                          {d.source_url && (
-                            <a
-                              className={styles.sourceLink}
-                              href={d.source_url}
-                              target="_blank"
-                              rel="noreferrer"
-                              onClick={e => e.stopPropagation()}
-                            >↗</a>
-                          )}
-                        </div>
-                        <div className={styles.mobileTableExpandDesc}>{description}</div>
-                      </td>
-                    </tr>
-                  )}
+                  <MobileExpandRow isOpen={expanded} colSpan={MOBILE_COLUMNS.length}>
+                    <div className={styles.mobileTableExpandMeta}>
+                      {type && <span className={styles.dealTypePill}>{type.label}</span>}
+                      {d.source_url && (
+                        <a
+                          className={styles.sourceLink}
+                          href={d.source_url}
+                          target="_blank"
+                          rel="noreferrer"
+                          onClick={e => e.stopPropagation()}
+                        >↗</a>
+                      )}
+                    </div>
+                    <div className={styles.mobileTableExpandDesc}>{description}</div>
+                  </MobileExpandRow>
                 </Fragment>
               )
             }

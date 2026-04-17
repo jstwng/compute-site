@@ -1302,12 +1302,24 @@
 .mobileTable thead th:nth-child(3),
 .mobileTable thead th:nth-child(4) { width: 1px; }
 
-.mobileTableExpandRow td { background: var(--row-hover); }
+.mobileTableExpandRow td { background: var(--row-hover); border-bottom: 1px solid var(--border-soft); }
 .mobileTableExpandCell {
-  padding: 8px 4px 12px !important;
+  padding: 0 !important;
   white-space: normal !important;
-  overflow: visible !important;
+  overflow: hidden !important;
   max-width: none !important;
+}
+.mobileTableExpandInner {
+  max-height: 0;
+  opacity: 0;
+  padding: 0 4px;
+  overflow: hidden;
+  transition: max-height 240ms ease, opacity 200ms ease, padding 240ms ease;
+}
+.mobileTableExpandInnerOpen {
+  max-height: 500px;
+  opacity: 1;
+  padding: 8px 4px 12px;
 }
 .mobileTableExpandMeta {
   display: flex;
@@ -1317,7 +1329,7 @@
   margin-bottom: 6px;
 }
 .mobileTableExpandDesc {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--text);
   line-height: 1.45;
   word-break: break-word;

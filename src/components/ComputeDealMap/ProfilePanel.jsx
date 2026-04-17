@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { Fragment, useEffect, useMemo, useState } from 'react'
 import styles from './styles.module.css'
 import { DEAL_TYPES } from './data.js'
 import Dropdown from './Dropdown.jsx'
@@ -79,12 +79,14 @@ export default function ProfilePanel({
                 content={shownContent}
                 onScrollToRow={onScrollToRow}
                 timelineRange={timelineRange}
+                isMobile={isMobile}
               />
             : <DealMode
                 content={shownContent}
                 onOpenCompany={onOpenCompany}
                 onScrollToRow={onScrollToRow}
                 timelineRange={timelineRange}
+                isMobile={isMobile}
               />
           }
         </div>
@@ -93,8 +95,37 @@ export default function ProfilePanel({
   )
 }
 
-function CompanyMode({ content, onScrollToRow, timelineRange }) {
+// Mobile expand wrapper for deal rows inside the panel — same mount/visible
+// pattern used in the mobile transactions table so open AND close animate.
+function PanelDealExpand({ isOpen, children }) {
+  const [mounted, setMounted] = useState(isOpen)
+  const [visible, setVisible] = useState(false)
+  useEffect(() => {
+    if (isOpen) {
+      setMounted(true)
+      const raf = requestAnimationFrame(() => setVisible(true))
+      return () => cancelAnimationFrame(raf)
+    }
+    setVisible(false)
+    const t = setTimeout(() => setMounted(false), 240)
+    return () => clearTimeout(t)
+  }, [isOpen])
+  if (!mounted) return null
+  return (
+    <tr className={styles.mobileTableExpandRow}>
+      <td colSpan={3} className={styles.mobileTableExpandCell}>
+        <div className={`${styles.mobileTableExpandInner} ${visible ? styles.mobileTableExpandInnerOpen : ''}`}>
+          {children}
+        </div>
+      </td>
+    </tr>
+  )
+}
+
+function CompanyMode({ content, onScrollToRow, timelineRange, isMobile }) {
   const { company, deals, counterpartyFilter, onSetCounterpartyFilter } = content
+  const [expandedId, setExpandedId] = useState(null)
+  const toggleExpanded = id => setExpandedId(prev => (prev === id ? null : id))
 
   const counterpartiesSorted = useMemo(() => {
     const counts = new Map()
@@ -169,52 +200,104 @@ function CompanyMode({ content, onScrollToRow, timelineRange }) {
           <div className={styles.profileSubhead}>
             Deals · {filteredDeals.length}
           </div>
-          <ul className={styles.profileDealList}>
-            {filteredDeals.map(d => {
-              const otherParty = d.source === company.name ? d.target : d.source
-              const outOfRange = timelineRange && d.date && (
-                (timelineRange.from && d.date < timelineRange.from) ||
-                (timelineRange.to && d.date > timelineRange.to)
-              )
-              return (
-                <li
-                  key={d.id}
-                  className={styles.profileDealRow}
-                  style={outOfRange ? { opacity: 0.3 } : undefined}
-                  onClick={() => onScrollToRow(d.id)}
-                >
-                  <div className={styles.profileDealMeta}>
-                    <span>{d.date_display || d.date}</span>
-                    <span className={styles.profileDealCounterparty}>{otherParty}</span>
-                    <span>{DEAL_TYPES[d.deal_type]?.label}</span>
-                  </div>
-                  {d.description && <div className={styles.profileDealDesc}>{d.description}</div>}
-                  <div className={styles.profileDealMeta}>
-                    <span>{d.value_display || ''}</span>
-                    {d.source_url && (
-                      <a
-                        className={styles.profileDealSource}
-                        href={d.source_url}
-                        target="_blank"
-                        rel="noreferrer"
-                        onClick={e => e.stopPropagation()}
+          {isMobile ? (
+            <table className={styles.mobileTable}>
+              <thead>
+                <tr>
+                  <th style={{ whiteSpace: 'nowrap' }}>Counterparty</th>
+                  <th data-align="right" style={{ whiteSpace: 'nowrap' }}>Value</th>
+                  <th data-align="right" style={{ whiteSpace: 'nowrap' }}>Date</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredDeals.map(d => {
+                  const otherParty = d.source === company.name ? d.target : d.source
+                  const outOfRange = timelineRange && d.date && (
+                    (timelineRange.from && d.date < timelineRange.from) ||
+                    (timelineRange.to && d.date > timelineRange.to)
+                  )
+                  const expanded = expandedId === d.id
+                  return (
+                    <Fragment key={d.id}>
+                      <tr
+                        className={styles.clickableRow}
+                        style={outOfRange ? { opacity: 0.3 } : undefined}
+                        onClick={() => toggleExpanded(d.id)}
                       >
-                        ↗
-                      </a>
-                    )}
-                  </div>
-                </li>
-              )
-            })}
-          </ul>
+                        <td>{otherParty}</td>
+                        <td className={styles.valueCell}>{d.value_display || ''}</td>
+                        <td className={styles.valueCell}>{d.date_display || d.date}</td>
+                      </tr>
+                      <PanelDealExpand isOpen={expanded}>
+                        <div className={styles.mobileTableExpandMeta}>
+                          <span>{DEAL_TYPES[d.deal_type]?.label}</span>
+                          {d.source_url && (
+                            <a
+                              className={styles.sourceLink}
+                              href={d.source_url}
+                              target="_blank"
+                              rel="noreferrer"
+                              onClick={e => e.stopPropagation()}
+                            >↗</a>
+                          )}
+                        </div>
+                        {d.description && <div className={styles.mobileTableExpandDesc}>{d.description}</div>}
+                      </PanelDealExpand>
+                    </Fragment>
+                  )
+                })}
+              </tbody>
+            </table>
+          ) : (
+            <ul className={styles.profileDealList}>
+              {filteredDeals.map(d => {
+                const otherParty = d.source === company.name ? d.target : d.source
+                const outOfRange = timelineRange && d.date && (
+                  (timelineRange.from && d.date < timelineRange.from) ||
+                  (timelineRange.to && d.date > timelineRange.to)
+                )
+                return (
+                  <li
+                    key={d.id}
+                    className={styles.profileDealRow}
+                    style={outOfRange ? { opacity: 0.3 } : undefined}
+                    onClick={() => onScrollToRow(d.id)}
+                  >
+                    <div className={styles.profileDealMeta}>
+                      <span>{d.date_display || d.date}</span>
+                      <span className={styles.profileDealCounterparty}>{otherParty}</span>
+                      <span>{DEAL_TYPES[d.deal_type]?.label}</span>
+                    </div>
+                    {d.description && <div className={styles.profileDealDesc}>{d.description}</div>}
+                    <div className={styles.profileDealMeta}>
+                      <span>{d.value_display || ''}</span>
+                      {d.source_url && (
+                        <a
+                          className={styles.profileDealSource}
+                          href={d.source_url}
+                          target="_blank"
+                          rel="noreferrer"
+                          onClick={e => e.stopPropagation()}
+                        >
+                          ↗
+                        </a>
+                      )}
+                    </div>
+                  </li>
+                )
+              })}
+            </ul>
+          )}
         </div>
       )}
     </>
   )
 }
 
-function DealMode({ content, onOpenCompany, onScrollToRow, timelineRange }) {
+function DealMode({ content, onOpenCompany, onScrollToRow, timelineRange, isMobile }) {
   const { edge, deals } = content
+  const [expandedId, setExpandedId] = useState(null)
+  const toggleExpanded = id => setExpandedId(prev => (prev === id ? null : id))
   const disclosed = deals.filter(d => d.value_billions != null)
   const totalValue = disclosed.reduce((s, d) => s + (d.value_billions || 0), 0)
   const aggregateLine = deals.length > 1
@@ -239,39 +322,84 @@ function DealMode({ content, onOpenCompany, onScrollToRow, timelineRange }) {
 
       <div>
         <div className={styles.profileSubhead}>Deals · {deals.length}</div>
-        <ul className={styles.profileDealList}>
-          {deals.map(d => {
-            const outOfRange = timelineRange && d.date && d.date > timelineRange
-            return (
-              <li
-                key={d.id}
-                className={styles.profileDealRow}
-                style={outOfRange ? { opacity: 0.3 } : undefined}
-                onClick={() => onScrollToRow(d.id)}
-              >
-                <div className={styles.profileDealMeta}>
-                  <span>{d.date_display || d.date}</span>
-                  <span>{DEAL_TYPES[d.deal_type]?.label}</span>
-                </div>
-                {d.description && <div className={styles.profileDealDesc}>{d.description}</div>}
-                <div className={styles.profileDealMeta}>
-                  <span>{d.value_display || ''}</span>
-                  {d.source_url && (
-                    <a
-                      className={styles.profileDealSource}
-                      href={d.source_url}
-                      target="_blank"
-                      rel="noreferrer"
-                      onClick={e => e.stopPropagation()}
+        {isMobile ? (
+          <table className={styles.mobileTable}>
+            <thead>
+              <tr>
+                <th style={{ whiteSpace: 'nowrap' }}>Type</th>
+                <th data-align="right" style={{ whiteSpace: 'nowrap' }}>Value</th>
+                <th data-align="right" style={{ whiteSpace: 'nowrap' }}>Date</th>
+              </tr>
+            </thead>
+            <tbody>
+              {deals.map(d => {
+                const outOfRange = timelineRange && d.date && d.date > timelineRange
+                const expanded = expandedId === d.id
+                return (
+                  <Fragment key={d.id}>
+                    <tr
+                      className={styles.clickableRow}
+                      style={outOfRange ? { opacity: 0.3 } : undefined}
+                      onClick={() => toggleExpanded(d.id)}
                     >
-                      Source
-                    </a>
-                  )}
-                </div>
-              </li>
-            )
-          })}
-        </ul>
+                      <td>{DEAL_TYPES[d.deal_type]?.label}</td>
+                      <td className={styles.valueCell}>{d.value_display || ''}</td>
+                      <td className={styles.valueCell}>{d.date_display || d.date}</td>
+                    </tr>
+                    <PanelDealExpand isOpen={expanded}>
+                      <div className={styles.mobileTableExpandMeta}>
+                        {d.source_url && (
+                          <a
+                            className={styles.sourceLink}
+                            href={d.source_url}
+                            target="_blank"
+                            rel="noreferrer"
+                            onClick={e => e.stopPropagation()}
+                          >↗</a>
+                        )}
+                      </div>
+                      {d.description && <div className={styles.mobileTableExpandDesc}>{d.description}</div>}
+                    </PanelDealExpand>
+                  </Fragment>
+                )
+              })}
+            </tbody>
+          </table>
+        ) : (
+          <ul className={styles.profileDealList}>
+            {deals.map(d => {
+              const outOfRange = timelineRange && d.date && d.date > timelineRange
+              return (
+                <li
+                  key={d.id}
+                  className={styles.profileDealRow}
+                  style={outOfRange ? { opacity: 0.3 } : undefined}
+                  onClick={() => onScrollToRow(d.id)}
+                >
+                  <div className={styles.profileDealMeta}>
+                    <span>{d.date_display || d.date}</span>
+                    <span>{DEAL_TYPES[d.deal_type]?.label}</span>
+                  </div>
+                  {d.description && <div className={styles.profileDealDesc}>{d.description}</div>}
+                  <div className={styles.profileDealMeta}>
+                    <span>{d.value_display || ''}</span>
+                    {d.source_url && (
+                      <a
+                        className={styles.profileDealSource}
+                        href={d.source_url}
+                        target="_blank"
+                        rel="noreferrer"
+                        onClick={e => e.stopPropagation()}
+                      >
+                        Source
+                      </a>
+                    )}
+                  </div>
+                </li>
+              )
+            })}
+          </ul>
+        )}
       </div>
 
       <div>

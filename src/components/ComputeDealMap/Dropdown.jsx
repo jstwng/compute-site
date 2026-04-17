@@ -55,9 +55,9 @@ export default function Dropdown({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen])
 
-  // Two-state mount. Panel transition matches the .rowEnter animation
-  // used for expand/collapse table rows: opacity 0 -> 1 with a small
-  // translateY(-4px) settle, 260ms ease.
+  // Two-state mount. Panel uses the same max-height + opacity transition
+  // as the mobile table row expand/collapse (see .mobileTableExpandInner
+  // in styles.module.css): 240ms on max-height, 200ms on opacity.
   const [panelMounted, setPanelMounted] = useState(false)
   const [panelVisible, setPanelVisible] = useState(false)
   useEffect(() => {
@@ -67,7 +67,7 @@ export default function Dropdown({
       return () => cancelAnimationFrame(raf)
     }
     setPanelVisible(false)
-    const t = setTimeout(() => setPanelMounted(false), 260)
+    const t = setTimeout(() => setPanelMounted(false), 240)
     return () => clearTimeout(t)
   }, [isOpen])
 
@@ -156,8 +156,9 @@ export default function Dropdown({
             display: 'flex',
             flexDirection: 'column',
             opacity: panelVisible ? 1 : 0,
-            transform: `translateY(${panelVisible ? 0 : -4}px)`,
-            transition: 'opacity 260ms ease, transform 260ms ease',
+            maxHeight: panelVisible ? 600 : 0,
+            overflow: 'hidden',
+            transition: 'max-height 240ms ease, opacity 200ms ease',
             pointerEvents: panelVisible ? 'auto' : 'none',
           }}
         >

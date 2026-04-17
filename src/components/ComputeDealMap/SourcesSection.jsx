@@ -1,7 +1,32 @@
-import { Fragment, useMemo, useState } from 'react'
+import { Fragment, useEffect, useMemo, useState } from 'react'
 import styles from './styles.module.css'
 import { DEALS } from './data'
 import useMediaQuery from './useMediaQuery.js'
+
+function MobileExpandRow({ isOpen, colSpan, children }) {
+  const [mounted, setMounted] = useState(isOpen)
+  const [visible, setVisible] = useState(false)
+  useEffect(() => {
+    if (isOpen) {
+      setMounted(true)
+      const raf = requestAnimationFrame(() => setVisible(true))
+      return () => cancelAnimationFrame(raf)
+    }
+    setVisible(false)
+    const t = setTimeout(() => setMounted(false), 240)
+    return () => clearTimeout(t)
+  }, [isOpen])
+  if (!mounted) return null
+  return (
+    <tr className={styles.mobileTableExpandRow}>
+      <td colSpan={colSpan} className={styles.mobileTableExpandCell}>
+        <div className={`${styles.mobileTableExpandInner} ${visible ? styles.mobileTableExpandInnerOpen : ''}`}>
+          {children}
+        </div>
+      </td>
+    </tr>
+  )
+}
 
 // Domain → publisher label. Anything not listed falls back to the bare hostname.
 const PUBLISHER = {
@@ -132,15 +157,11 @@ const MOBILE_COLUMNS = [
 export default function SourcesSection() {
   const [sort, setSort] = useState({ column: 'date', direction: 'desc' })
   const [visibleCount, setVisibleCount] = useState(20)
-  const [expandedIds, setExpandedIds] = useState(() => new Set())
+  const [expandedId, setExpandedId] = useState(null)
   const isMobile = useMediaQuery('(max-width: 767px)')
 
   const toggleExpanded = (id) => {
-    setExpandedIds(prev => {
-      const next = new Set(prev)
-      if (next.has(id)) next.delete(id); else next.add(id)
-      return next
-    })
+    setExpandedId(prev => (prev === id ? null : id))
   }
 
   const ROWS = useMemo(
@@ -205,7 +226,7 @@ export default function SourcesSection() {
             </thead>
             <tbody>
               {visible.map(r => {
-                const expanded = expandedIds.has(r.n)
+                const expanded = expandedId === r.n
                 const truncClass = expanded ? styles.descTextExpanded : styles.descTextTruncated
                 return (
                   <tr
@@ -265,7 +286,7 @@ export default function SourcesSection() {
               </thead>
               <tbody>
                 {visible.map(r => {
-                  const expanded = expandedIds.has(r.n)
+                  const expanded = expandedId === r.n
                   return (
                     <Fragment key={r.n}>
                       <tr
@@ -276,24 +297,20 @@ export default function SourcesSection() {
                         <td>{r.article}</td>
                         <td className={styles.valueCell}>{r.date}</td>
                       </tr>
-                      {expanded && (
-                        <tr className={styles.mobileTableExpandRow}>
-                          <td colSpan={MOBILE_COLUMNS.length} className={styles.mobileTableExpandCell}>
-                            <div className={styles.mobileTableExpandMeta}>
-                              <span>{r.deals}</span>
-                              {r.url && (
-                                <a
-                                  className={styles.sourceLink}
-                                  href={r.url}
-                                  target="_blank"
-                                  rel="noreferrer"
-                                  onClick={e => e.stopPropagation()}
-                                >↗</a>
-                              )}
-                            </div>
-                          </td>
-                        </tr>
-                      )}
+                      <MobileExpandRow isOpen={expanded} colSpan={MOBILE_COLUMNS.length}>
+                        <div className={styles.mobileTableExpandMeta}>
+                          <span>{r.deals}</span>
+                          {r.url && (
+                            <a
+                              className={styles.sourceLink}
+                              href={r.url}
+                              target="_blank"
+                              rel="noreferrer"
+                              onClick={e => e.stopPropagation()}
+                            >↗</a>
+                          )}
+                        </div>
+                      </MobileExpandRow>
                     </Fragment>
                   )
                 })}
