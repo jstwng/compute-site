@@ -83,8 +83,12 @@ export default function Dropdown({
             background: 'var(--bg)',
             border: '1px solid var(--border)',
             borderRadius: 0,
-            padding: '0 8px',
+            padding: '0 10px',
             fontFamily: 'inherit',
+            appearance: 'none',
+            WebkitAppearance: 'none',
+            MozAppearance: 'none',
+            backgroundImage: 'none',
           }}
         >
           {options.map(o => (

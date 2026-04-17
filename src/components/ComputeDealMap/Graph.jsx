@@ -356,15 +356,42 @@ export default function Graph({ deals, hoveredEdge, onHoverEdge, hoveredNode, on
     }
   }, [updateDims])
 
-  // Layout is computed only once dims are known. While dims is null the
-  // positions map is empty and the SVG renders at opacity 0 so the user
-  // never sees a wrong-sized or mid-simulation state.
-  const { positions, visible } = useMemo(
-    () => dims
-      ? computeGraphLayout(deals, dims.w, dims.h, focusedNodes)
-      : { positions: new Map(), visible: new Set() },
-    [deals, dims, focusedNodes]
-  )
+  // Client-side LRU cache for computed layouts. `computeGraphLayout` runs
+  // ~1000 force-simulation ticks + an overlap-removal sweep and costs
+  // ~50-200ms on the main thread. Returning to a previously-seen
+  // configuration (most commonly: clearing focus to go back to the default
+  // view) is a cache hit and paints on the same frame instead of blocking
+  // the transition. The cache key bundles dims (rounded so a 1px resize
+  // doesn't invalidate), the deal set (filtered deals' ids), and the
+  // focus set — the three inputs that uniquely determine a layout.
+  const layoutCache = useRef(new Map())
+  const MAX_CACHE = 50
+
+  const { positions, visible } = useMemo(() => {
+    if (!dims) return { positions: new Map(), visible: new Set() }
+    const w = Math.round(dims.w / 20) * 20
+    const h = Math.round(dims.h / 20) * 20
+    const dealKey = deals.length + ':' + deals.map(d => d.id).join(',')
+    const focusKey = focusedNodes ? [...focusedNodes].sort().join('|') : ''
+    const cacheKey = `${w}x${h}|${dealKey}|${focusKey}`
+
+    const cache = layoutCache.current
+    const cached = cache.get(cacheKey)
+    if (cached) {
+      // Refresh LRU position so hot configurations stay warm.
+      cache.delete(cacheKey)
+      cache.set(cacheKey, cached)
+      return cached
+    }
+
+    const result = computeGraphLayout(deals, dims.w, dims.h, focusedNodes)
+    if (cache.size >= MAX_CACHE) {
+      const oldest = cache.keys().next().value
+      cache.delete(oldest)
+    }
+    cache.set(cacheKey, result)
+    return result
+  }, [deals, dims, focusedNodes])
 
   const layoutReady = positions.size > 0
   const isMobile = useMediaQuery('(max-width: 767px)')
