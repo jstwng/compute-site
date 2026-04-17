@@ -4,11 +4,27 @@ import { DEALS } from './data'
 import useMediaQuery from './useMediaQuery.js'
 
 function MobileExpandRow({ isOpen, colSpan, children }) {
-  if (!isOpen) return null
+  const [mounted, setMounted] = useState(isOpen)
+  const [visible, setVisible] = useState(false)
+  useEffect(() => {
+    if (isOpen) {
+      setMounted(true)
+      const raf = requestAnimationFrame(() => setVisible(true))
+      return () => cancelAnimationFrame(raf)
+    }
+    setVisible(false)
+    const t = setTimeout(() => setMounted(false), 260)
+    return () => clearTimeout(t)
+  }, [isOpen])
+  if (!mounted) return null
   return (
     <tr className={styles.mobileTableExpandRow}>
       <td colSpan={colSpan} className={styles.mobileTableExpandCell}>
-        {children}
+        <div className={`${styles.mobileTableExpandOuter} ${visible ? styles.mobileTableExpandOuterOpen : ''}`}>
+          <div className={styles.mobileTableExpandInner}>
+            {children}
+          </div>
+        </div>
       </td>
     </tr>
   )

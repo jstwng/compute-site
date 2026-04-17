@@ -4,14 +4,31 @@ import { DEAL_TYPES } from './data.js'
 import { sortDeals } from './logic.js'
 import useMediaQuery from './useMediaQuery.js'
 
-// Instant mount/unmount — matches desktop's behavior where the expand
-// cell simply reflows into place without a transition.
+// Animated expand/collapse — same grid-template-rows pattern the Dropdown
+// panel uses, so opening and closing both animate symmetrically. Mounts
+// while isOpen is true, stays mounted through the exit transition.
 function MobileExpandRow({ isOpen, colSpan, children }) {
-  if (!isOpen) return null
+  const [mounted, setMounted] = useState(isOpen)
+  const [visible, setVisible] = useState(false)
+  useEffect(() => {
+    if (isOpen) {
+      setMounted(true)
+      const raf = requestAnimationFrame(() => setVisible(true))
+      return () => cancelAnimationFrame(raf)
+    }
+    setVisible(false)
+    const t = setTimeout(() => setMounted(false), 260)
+    return () => clearTimeout(t)
+  }, [isOpen])
+  if (!mounted) return null
   return (
     <tr className={styles.mobileTableExpandRow}>
       <td colSpan={colSpan} className={styles.mobileTableExpandCell}>
-        {children}
+        <div className={`${styles.mobileTableExpandOuter} ${visible ? styles.mobileTableExpandOuterOpen : ''}`}>
+          <div className={styles.mobileTableExpandInner}>
+            {children}
+          </div>
+        </div>
       </td>
     </tr>
   )
