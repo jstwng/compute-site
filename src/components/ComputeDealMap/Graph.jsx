@@ -2,7 +2,7 @@ import { useMemo, useState, useRef, useEffect, useLayoutEffect, useCallback } fr
 import { forceSimulation, forceLink, forceManyBody, forceCollide, forceX, forceY } from 'd3-force'
 import styles from './styles.module.css'
 import { COMPANIES, findCompany } from './companies.js'
-import DealCard from './DealCard.jsx'
+import DealHoverCard from './DealHoverCard.jsx'
 import CompanyCard from './CompanyCard.jsx'
 
 const NODE_WIDTH = 100
@@ -399,7 +399,7 @@ export default function Graph({ deals, hoveredEdge, onHoverEdge, hoveredNode, on
       .map(d => ({ ...d, counterparty: d.source === hoveredNode ? d.target : d.source }))
   }, [hoveredNode, deals])
 
-  // Aggregate edge for DealCard (when hovering any of the pair's edges)
+  // Aggregate edge for DealHoverCard (when hovering any of the pair's edges)
   const hoveredEdgeAggregate = useMemo(() => {
     if (!hoveredEdge) return null
     const pairDeals = graphDeals.filter(
@@ -640,7 +640,7 @@ export default function Graph({ deals, hoveredEdge, onHoverEdge, hoveredNode, on
         const midX = src && tgt ? (src.x + src.w / 2 + tgt.x + tgt.w / 2) / 2 : cursor.x
         const midY = src && tgt ? (src.y + NODE_HEIGHT / 2 + tgt.y + NODE_HEIGHT / 2) / 2 : cursor.y
         return (
-          <DealCard
+          <DealHoverCard
             edge={hoveredEdgeAggregate}
             x={midX}
             y={midY}

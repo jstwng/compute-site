@@ -96,7 +96,7 @@
 }
 
 /* Canonical source affordance — the ↗ glyph shared across ProfilePanel
-   (description + deal rows), DealTable, DealCard, SourcesSection.
+   (description + deal rows), DealTable, DealHoverCard, SourcesSection.
    Rendered as a plain white arrow; no underline since it's a glyph,
    not text. Brightens to --text-strong on hover. */
 .profileDescriptionSource,
@@ -857,7 +857,7 @@
   pointer-events: none;
 }
 
-/* DealCard */
+/* DealHoverCard */
 .dealCard {
   position: absolute;
   background: var(--card-bg);
@@ -1111,4 +1111,64 @@
 
 @media (max-width: 767px) {
   .graphWrap { padding: 16px; }
+}
+
+/* Mobile card-list row for Transactions + Sources. */
+.dealCardMobile {
+  padding: 10px 8px;
+  border-bottom: 1px solid var(--border-soft);
+  cursor: pointer;
+  background: transparent;
+  transition: background 100ms ease;
+}
+.dealCardMobile:active { background: var(--row-hover); }
+.dealCardMobileHighlighted { background: var(--row-highlight); }
+.dealCardMobileLine1 {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-strong);
+  line-height: 1.3;
+  padding: 6px 0;
+}
+.dealCardMobileCompany {
+  cursor: pointer;
+}
+.dealCardMobileCompany:hover {
+  text-decoration: underline;
+  text-decoration-color: var(--link-underline);
+  text-underline-offset: 2px;
+}
+.dealCardMobileArrow {
+  color: var(--text-muted);
+  font-weight: 400;
+}
+.dealCardMobileLine2 {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.4;
+  margin-top: 2px;
+  gap: 8px;
+}
+.dealCardMobileSource {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  color: var(--text);
+  text-decoration: none;
+  cursor: pointer;
+}
+.dealCardMobileSource:hover { color: var(--text-strong); }
+.dealCardMobileLine3 {
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.4;
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
