@@ -1131,6 +1131,9 @@
   padding: 6px 0;
 }
 .dealCardMobileCompany {
+  display: inline-block;
+  padding: 8px 6px;
+  margin: -8px -6px;
   cursor: pointer;
 }
 .dealCardMobileCompany:hover {

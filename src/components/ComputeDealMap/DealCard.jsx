@@ -17,6 +17,14 @@ export default function DealCard({ deal: d, onClickDeal, onClickCompany, highlig
     onClickCompany?.(name)
   }
 
+  const handleCompanyKeyDown = (name) => (e) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault()
+      e.stopPropagation()
+      onClickCompany?.(name)
+    }
+  }
+
   return (
     <div
       className={[
@@ -36,16 +44,18 @@ export default function DealCard({ deal: d, onClickDeal, onClickCompany, highlig
       <div className={styles.dealCardMobileLine1}>
         <span
           className={styles.dealCardMobileCompany}
-          role="link"
+          role="button"
           tabIndex={0}
           onClick={handleCompany(d.source)}
+          onKeyDown={handleCompanyKeyDown(d.source)}
         >{d.source}</span>
         <span className={styles.dealCardMobileArrow}> to </span>
         <span
           className={styles.dealCardMobileCompany}
-          role="link"
+          role="button"
           tabIndex={0}
           onClick={handleCompany(d.target)}
+          onKeyDown={handleCompanyKeyDown(d.target)}
         >{d.target}</span>
       </div>
       <div className={styles.dealCardMobileLine2}>

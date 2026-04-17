@@ -39,4 +39,14 @@ describe('DealCard (mobile)', () => {
     expect(onClickCompany).toHaveBeenCalledWith('NVIDIA')
     expect(onClickDeal).not.toHaveBeenCalled()
   })
+
+  it('pressing Enter on a company name fires onClickCompany', () => {
+    const onClickDeal = vi.fn()
+    const onClickCompany = vi.fn()
+    render(<DealCard deal={deal} onClickDeal={onClickDeal} onClickCompany={onClickCompany} />)
+    const companySpan = screen.getByText('NVIDIA')
+    fireEvent.keyDown(companySpan, { key: 'Enter' })
+    expect(onClickCompany).toHaveBeenCalledWith('NVIDIA')
+    expect(onClickDeal).not.toHaveBeenCalled()
+  })
 })
