@@ -56,12 +56,13 @@ function computeMaxNodes(width, height) {
 
 // Re-evaluate capacity using the actual widths of the picked companies.
 // If the selection exceeds what will fit, drop lowest-degree members
-// until it does. Returns the adjusted visible set.
-function fitVisibleNodes(visible, graphDeals, width, height, focusedNode) {
+// until it does. Focused nodes are always retained.
+function fitVisibleNodes(visible, graphDeals, width, height, focusedNodes) {
   const usableW = Math.max(0, width - 2 * MARGIN)
   const usableH = Math.max(0, height - 2 * MARGIN)
   const rows = Math.max(1, Math.floor(usableH / (NODE_HEIGHT + MIN_GAP)))
   const degrees = degreeMap(graphDeals)
+  const focused = focusedNodes instanceof Set ? focusedNodes : new Set()
   let current = visible
   for (let i = 0; i < 20; i++) {
     const companies = COMPANIES.filter(c => current.has(c.name))
@@ -71,11 +72,11 @@ function fitVisibleNodes(visible, graphDeals, width, height, focusedNode) {
     const cols = Math.max(1, Math.floor(usableW / (maxW + MIN_GAP)))
     const fitCap = Math.max(MIN_NODE_CAP, Math.floor(cols * rows * PACK_FILL))
     if (current.size <= fitCap) break
-    // Trim the lowest-degree non-focused node. Focused node is always retained.
+    // Trim the lowest-degree non-focused node. Focused nodes are always retained.
     const sorted = [...current].sort(
       (a, b) => (degrees.get(a) || 0) - (degrees.get(b) || 0) || a.localeCompare(b)
     )
-    const drop = sorted.find(n => n !== focusedNode)
+    const drop = sorted.find(n => !focused.has(n))
     if (!drop) break
     const next = new Set(current)
     next.delete(drop)
@@ -95,20 +96,23 @@ function degreeMap(edges) {
 }
 
 // Choose which nodes render. If no focus: top-N by degree within the main
-// connected component. If focused: focused node + top-(N-1) of its direct
-// neighbors by global degree. Ties broken by name for determinism.
-function selectVisibleNodes(graphDeals, focusedNode, max) {
+// connected component. If focused: the focused nodes + top-(N - |focused|)
+// of their direct neighbors by global degree. Ties broken by name for
+// determinism. `focusedNodes` is a Set — size 1 for company-focus, size 2
+// for edge-focus (show both endpoints + their combined neighborhoods).
+function selectVisibleNodes(graphDeals, focusedNodes, max) {
   const degrees = degreeMap(graphDeals)
   const cmp = (a, b) => (degrees.get(b) || 0) - (degrees.get(a) || 0) || a.localeCompare(b)
 
-  if (focusedNode) {
+  if (focusedNodes instanceof Set && focusedNodes.size > 0) {
     const neighbors = new Set()
     graphDeals.forEach(d => {
-      if (d.source === focusedNode) neighbors.add(d.target)
-      else if (d.target === focusedNode) neighbors.add(d.source)
+      if (focusedNodes.has(d.source) && !focusedNodes.has(d.target)) neighbors.add(d.target)
+      else if (focusedNodes.has(d.target) && !focusedNodes.has(d.source)) neighbors.add(d.source)
     })
-    const ranked = [...neighbors].sort(cmp).slice(0, Math.max(0, max - 1))
-    return new Set([focusedNode, ...ranked])
+    const room = Math.max(0, max - focusedNodes.size)
+    const ranked = [...neighbors].sort(cmp).slice(0, room)
+    return new Set([...focusedNodes, ...ranked])
   }
 
   const allNames = new Set()
@@ -191,12 +195,12 @@ function largestComponent(nodeNames, edges) {
   return best
 }
 
-function computeGraphLayout(deals, width, height, focusedNode) {
+function computeGraphLayout(deals, width, height, focusedNodes) {
   const graphDeals = deals.filter(d => d.deal_type !== 'funding_round' && d.source !== d.target)
 
   const maxNodes = computeMaxNodes(width, height)
-  const picked = selectVisibleNodes(graphDeals, focusedNode, maxNodes)
-  const visible = fitVisibleNodes(picked, graphDeals, width, height, focusedNode)
+  const picked = selectVisibleNodes(graphDeals, focusedNodes, maxNodes)
+  const visible = fitVisibleNodes(picked, graphDeals, width, height, focusedNodes)
   const componentDeals = graphDeals.filter(d => visible.has(d.source) && visible.has(d.target))
 
   const nodes = COMPANIES
@@ -299,12 +303,13 @@ function edgeSegment(src, tgt) {
 }
 
 
-export default function Graph({ deals, hoveredEdge, onHoverEdge, hoveredNode, onHoverNode, onScrollToRow, heightOverride, maximizable = true, onRequestMaximize, onRequestClose, isModal = false, onClickNode, onClickEdge, focusedNode: focusedNodeProp, onFocusChange, pathNodes, pathEdges, dimAll = false, activeNodeSet, activeEdgeSet, highlightNodeSet }) {
+export default function Graph({ deals, hoveredEdge, onHoverEdge, hoveredNode, onHoverNode, onScrollToRow, heightOverride, maximizable = true, onRequestMaximize, onRequestClose, isModal = false, onClickNode, onClickEdge, focusedNodes: focusedNodesProp, onFocusChange, pathNodes, pathEdges, dimAll = false, activeNodeSet, activeEdgeSet, highlightNodeSet }) {
   const [cursor, setCursor] = useState({ x: 0, y: 0 })
   const [cardPinned, setCardPinned] = useState(false)
-  const [focusedNodeInternal, setFocusedNodeInternal] = useState(null)
-  const focusedNode = focusedNodeProp !== undefined ? focusedNodeProp : focusedNodeInternal
-  const setFocusedNode = onFocusChange ?? setFocusedNodeInternal
+  const [focusedNodesInternal, setFocusedNodesInternal] = useState(null)
+  const focusedNodes = focusedNodesProp !== undefined ? focusedNodesProp : focusedNodesInternal
+  const setFocusedNodes = onFocusChange ?? setFocusedNodesInternal
+  const hasFocus = focusedNodes instanceof Set && focusedNodes.size > 0
   const [hoveringCanvas, setHoveringCanvas] = useState(false)
   const wrapRef = useRef(null)
   // dims starts null. useLayoutEffect measures the wrapper synchronously
@@ -343,17 +348,19 @@ export default function Graph({ deals, hoveredEdge, onHoverEdge, hoveredNode, on
   // never sees a wrong-sized or mid-simulation state.
   const { positions, visible } = useMemo(
     () => dims
-      ? computeGraphLayout(deals, dims.w, dims.h, focusedNode)
+      ? computeGraphLayout(deals, dims.w, dims.h, focusedNodes)
       : { positions: new Map(), visible: new Set() },
-    [deals, dims, focusedNode]
+    [deals, dims, focusedNodes]
   )
 
   const layoutReady = positions.size > 0
 
-  // If filters drop the focused node out of the dataset, reset focus.
+  // If filters drop every focused node out of the dataset, reset focus.
   useEffect(() => {
-    if (focusedNode && visible && !visible.has(focusedNode)) setFocusedNode(null)
-  }, [focusedNode, visible])
+    if (!hasFocus || !visible) return
+    const anyStillVisible = [...focusedNodes].some(n => visible.has(n))
+    if (!anyStillVisible) setFocusedNodes(null)
+  }, [focusedNodes, hasFocus, visible])
 
   // Each individual deal renders as its own edge (skip funding rounds + self-loops).
   // Restricted to edges where both endpoints are currently rendered.
@@ -435,11 +442,11 @@ export default function Graph({ deals, hoveredEdge, onHoverEdge, hoveredNode, on
         })
       }}
     >
-      {focusedNode && (
+      {hasFocus && (
         <button
           type="button"
           className={styles.graphReset}
-          onClick={() => { setFocusedNode(null); onHoverNode(null); setCardPinned(false) }}
+          onClick={() => { setFocusedNodes(null); onHoverNode(null); setCardPinned(false) }}
         >
           Reset view
         </button>
@@ -546,12 +553,12 @@ export default function Graph({ deals, hoveredEdge, onHoverEdge, hoveredNode, on
             return (
               <line
                 key={d.id}
-                className={styles.edgeLine}
+                className={`${styles.edgeLine} ${styles.graphEnter}`}
                 x1={a.x} y1={a.y} x2={b.x} y2={b.y}
                 strokeWidth={sw}
                 opacity={opacity}
                 style={{
-                  transition: 'opacity 150ms ease, stroke-width 150ms ease',
+                  transition: 'opacity 250ms ease, stroke-width 250ms ease',
                   cursor: hoveredNode ? 'default' : 'pointer',
                   ...(edgeVisible ? null : { pointerEvents: 'none' }),
                 }}
@@ -575,9 +582,10 @@ export default function Graph({ deals, hoveredEdge, onHoverEdge, hoveredNode, on
             return (
               <g
                 key={company.name}
+                className={styles.graphEnter}
                 transform={`translate(${x}, ${y})`}
                 style={{
-                  transition: 'transform 300ms ease-out, opacity 150ms ease',
+                  transition: 'transform 400ms cubic-bezier(0.4, 0, 0.2, 1), opacity 250ms ease',
                   cursor: nodeVisible ? 'pointer' : 'default',
                   opacity: nodeOpacity,
                   ...(nodeVisible ? null : { pointerEvents: 'none' }),
@@ -587,8 +595,13 @@ export default function Graph({ deals, hoveredEdge, onHoverEdge, hoveredNode, on
                 onClick={e => {
                   e.stopPropagation()
                   if (!nodeVisible) return
-                  if (onClickNode) onClickNode(company.name)
-                  else setFocusedNode(company.name === focusedNode ? null : company.name)
+                  if (onClickNode) {
+                    onClickNode(company.name)
+                  } else {
+                    // Uncontrolled fallback — toggle focus on self.
+                    const alreadyFocused = hasFocus && focusedNodes.has(company.name) && focusedNodes.size === 1
+                    setFocusedNodes(alreadyFocused ? null : new Set([company.name]))
+                  }
                 }}
               >
                 <rect

@@ -32,7 +32,9 @@ export default function App() {
   const [hoveredNode, setHoveredNode] = useState(null)
   const [scrollToDealId, setScrollToDealId] = useState(null)
   const [graphMaximized, setGraphMaximized] = useState(false)
-  const [focusedNode, setFocusedNode] = useState(null)
+  // focusedNodes is a Set (size 1 for company focus, size 2 for deal focus).
+  // Drives both the panel + the graph's narrow-to-neighborhood view.
+  const [focusedNodes, setFocusedNodes] = useState(null)
   const [panelMode, setPanelMode] = useState(null)
   const [panelKey, setPanelKey] = useState(null)
   const [counterpartyFilter, setCounterpartyFilter] = useState(null)
@@ -196,10 +198,12 @@ export default function App() {
     setPanelMode(null)
     setPanelKey(null)
     setCounterpartyFilter(null)
+    setFocusedNodes(null)
   }, [])
 
+  // Opening a company panel also focuses the graph on that company + its
+  // direct neighbors. Click the same company again to dismiss both.
   const openCompany = useCallback(name => {
-    // Click-to-toggle: re-clicking the already-open company closes the panel.
     if (panelMode === 'company' && panelKey === name) {
       closePanel()
       return
@@ -207,8 +211,11 @@ export default function App() {
     setPanelMode('company')
     setPanelKey(name)
     setCounterpartyFilter(null)
+    setFocusedNodes(new Set([name]))
   }, [panelMode, panelKey, closePanel])
 
+  // Opening a deal panel focuses the graph on both endpoints. Click the
+  // same deal (or row) again to dismiss.
   const openDeal = useCallback(edge => {
     const key = `${edge.source}__${edge.target}`
     if (panelMode === 'deal' && panelKey === key) {
@@ -217,12 +224,8 @@ export default function App() {
     }
     setPanelMode('deal')
     setPanelKey(key)
+    setFocusedNodes(new Set([edge.source, edge.target]))
   }, [panelMode, panelKey, closePanel])
-
-  const handleFocusCompany = useCallback(name => {
-    setFocusedNode(name)
-    closePanel()
-  }, [closePanel])
 
   const panelContent = useMemo(() => {
     if (!panelMode || !panelKey) return null
@@ -357,8 +360,8 @@ export default function App() {
             onRequestMaximize={() => setGraphMaximized(true)}
             onClickNode={openCompany}
             onClickEdge={openDeal}
-            focusedNode={focusedNode}
-            onFocusChange={setFocusedNode}
+            focusedNodes={focusedNodes}
+            onFocusChange={setFocusedNodes}
             pathNodes={tracePathNodes}
             pathEdges={tracePathEdges}
             dimAll={false}
@@ -371,7 +374,6 @@ export default function App() {
             onClose={closePanel}
             onOpenCompany={openCompany}
             onScrollToRow={id => setScrollToDealId(id)}
-            onFocusCompany={handleFocusCompany}
             timelineRange={isTimelineActive ? timelineRange : null}
           />
         </div>
@@ -410,6 +412,7 @@ export default function App() {
           scrollToDealId={scrollToDealId}
           onHoverEdge={setHoveredEdge}
           onClickCompany={openCompany}
+          onClickDeal={openDeal}
           banner={tableBanner}
         />
         <SourcesSection />

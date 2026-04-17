@@ -736,6 +736,15 @@
 
 .edgeLine { stroke: var(--edge); }
 
+/* Applied to node <g> and edge <line> on mount. Animates from opacity 0 to
+   the element's target opacity so nodes and edges that enter on focus
+   change fade in smoothly instead of popping at full brightness. */
+.graphEnter { animation: graphEnter 300ms ease-out; }
+
+@keyframes graphEnter {
+  from { opacity: 0; }
+}
+
 .graphReset {
   position: absolute;
   top: 12px;

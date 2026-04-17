@@ -8,7 +8,6 @@ export default function ProfilePanel({
   onClose,
   onOpenCompany,
   onScrollToRow,
-  onFocusCompany,
   timelineRange,
 }) {
   // Keep last non-null content mounted through the slide-out animation so
@@ -59,7 +58,6 @@ export default function ProfilePanel({
           ? <CompanyMode
               content={shownContent}
               onScrollToRow={onScrollToRow}
-              onFocusCompany={onFocusCompany}
               timelineRange={timelineRange}
             />
           : <DealMode
@@ -74,7 +72,7 @@ export default function ProfilePanel({
   )
 }
 
-function CompanyMode({ content, onScrollToRow, onFocusCompany, timelineRange }) {
+function CompanyMode({ content, onScrollToRow, timelineRange }) {
   const { company, deals, counterpartyFilter, onSetCounterpartyFilter } = content
 
   const counterpartiesSorted = useMemo(() => {
@@ -118,15 +116,6 @@ function CompanyMode({ content, onScrollToRow, onFocusCompany, timelineRange }) 
             </p>
             <hr className={styles.profilePanelDivider} />
           </>
-        )}
-        {onFocusCompany && (
-          <button
-            type="button"
-            className={styles.profileFocusLink}
-            onClick={() => onFocusCompany(company.name)}
-          >
-            Focus on this company
-          </button>
         )}
       </div>
 
