@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import useMediaQuery from './useMediaQuery.js'
 
 const DEAL_TYPE_OPTIONS = [
   { value: 'all',                label: 'All Deals' },
@@ -19,6 +20,7 @@ const CATEGORY_OPTIONS = [
 
 function DropdownFilter({ label, options, value, onChange, isOpen, onToggle }) {
   const activeLabel = options.find(o => o.value === value)?.label || ''
+  const isMobile = useMediaQuery('(max-width: 767px)')
 
   // Two-state mount. Panel uses the same max-height + opacity transition
   // as the mobile table row expand/collapse (see .mobileTableExpandInner
@@ -93,8 +95,8 @@ function DropdownFilter({ label, options, value, onChange, isOpen, onToggle }) {
                 style={{
                   display: 'block',
                   width: '100%',
-                  padding: '4px 10px',
-                  fontSize: '12px',
+                  padding: isMobile ? '8px 12px' : '4px 10px',
+                  fontSize: isMobile ? '14px' : '12px',
                   fontFamily: 'inherit',
                   fontWeight: opt.value === value ? 700 : 400,
                   color: 'var(--text)',

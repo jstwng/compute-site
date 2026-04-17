@@ -124,13 +124,13 @@ export default function Dropdown({
           display: 'flex',
           alignItems: 'center',
           gap: '6px',
-          height: '27px',
+          height: isMobile ? '32px' : '27px',
           padding: '0 12px 0 8px',
           border: '1px solid var(--border)',
           borderRadius: 0,
           background: 'transparent',
           color: 'var(--text)',
-          fontSize: '12px',
+          fontSize: isMobile ? '14px' : '12px',
           fontFamily: 'inherit',
           cursor: 'pointer',
           whiteSpace: 'nowrap',
@@ -181,8 +181,8 @@ export default function Dropdown({
                     onChange={e => setQuery(e.target.value)}
                     style={{
                       font: 'inherit',
-                      fontSize: '12px',
-                      height: '28px',
+                      fontSize: isMobile ? '14px' : '12px',
+                      height: isMobile ? '34px' : '28px',
                       padding: '0 8px',
                       border: 'none',
                       borderBottom: '1px solid var(--border)',
@@ -196,7 +196,7 @@ export default function Dropdown({
                   {filtered.length === 0 ? (
                     <div style={{
                       padding: '8px 10px',
-                      fontSize: '12px',
+                      fontSize: isMobile ? '14px' : '12px',
                       color: 'var(--text-muted)',
                     }}>
                       No matches
@@ -213,8 +213,8 @@ export default function Dropdown({
                       style={{
                         display: 'block',
                         width: '100%',
-                        padding: '4px 10px',
-                        fontSize: '12px',
+                        padding: isMobile ? '8px 12px' : '4px 10px',
+                        fontSize: isMobile ? '14px' : '12px',
                         fontFamily: 'inherit',
                         fontWeight: opt.value === value ? 700 : 400,
                         color: 'var(--text)',
