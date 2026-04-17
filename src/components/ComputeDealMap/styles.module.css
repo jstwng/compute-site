@@ -180,7 +180,7 @@
 .profileDealCounterparty { color: var(--text); font-weight: 600; }
 .profileDealDesc { margin: 4px 0; }
 
-@media (max-width: 900px) {
+@media (max-width: 767px) {
   .profilePanel {
     top: auto;
     bottom: 0;
@@ -293,7 +293,7 @@
 }
 .timelineDockReset:hover { color: var(--text); }
 
-@media (max-width: 700px) {
+@media (max-width: 767px) {
   .timelineDock {
     height: auto;
     padding: 8px 12px;
@@ -504,7 +504,7 @@
 }
 .toolbarPanelLink:hover { color: var(--text-strong); }
 
-@media (max-width: 900px) {
+@media (max-width: 767px) {
   .toolbar { gap: 8px; flex-wrap: wrap; }
   .toolbarChips { flex: 1 1 100%; flex-wrap: wrap; }
   .toolbarSearch { flex: 1 1 100%; min-width: 0; }
@@ -547,7 +547,7 @@
   min-width: 0;
 }
 
-@media (max-width: 900px) {
+@media (max-width: 767px) {
   .topSection { grid-template-columns: 1fr; }
 }
 
@@ -640,7 +640,7 @@
 .filterSearchMinimal::placeholder { color: var(--text-faint); }
 .filterSearchMinimal:focus { border-color: var(--text-muted); box-shadow: none; outline: none; }
 
-@media (max-width: 700px) {
+@media (max-width: 767px) {
   .filterSearchMinimal { width: 100%; flex: none; }
 }
 
@@ -1109,6 +1109,6 @@
 
 .flashRow td { animation: flashHighlight 1.4s ease forwards; }
 
-@media (max-width: 640px) {
+@media (max-width: 767px) {
   .graphWrap { padding: 16px; }
 }
