@@ -230,14 +230,37 @@
     top: 0;
     z-index: 3;
     background: var(--bg);
-    margin-bottom: 4px;
-    padding: 2px 0 4px;
-    display: flex;
-    flex-direction: column;
-    align-items: stretch;
-    gap: 2px;
+    margin: 0 -14px 6px;
+    padding: 4px 14px 8px;
+    border-bottom: 1px solid var(--border);
+    display: grid;
+    grid-template-columns: 1fr auto;
+    grid-template-rows: auto auto;
+    column-gap: 12px;
+    align-items: center;
   }
-  .profilePanelClose { align-self: flex-end; }
+  .profilePanelDragBar {
+    grid-column: 1 / -1;
+    grid-row: 1;
+    align-self: center;
+  }
+  .profilePanelHeaderTitle {
+    grid-column: 1;
+    grid-row: 2;
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    font-size: 15px;
+  }
+  .profilePanelHeaderTitle .profileName { font-weight: 700; }
+  .profilePanelClose {
+    grid-column: 2;
+    grid-row: 2;
+  }
   .profilePanelClose {
     padding: 2px 4px;
     font-size: 13px;
@@ -245,6 +268,9 @@
   .profilePanelBody {
     gap: 8px;
   }
+  /* Identity (company name + ticker, or edge pair) is hoisted into the
+     sticky header on mobile — hide the duplicate inside the body. */
+  .profileIdentity { display: none; }
   /* Kill every standalone horizontal rule + row divider inside the
      mobile panel. */
   .profilePanelDivider { display: none; }
@@ -586,9 +612,17 @@
     gap: 6px;
     order: 2;
   }
-  .toolbarChips > * { flex: 1 1 auto; }
+  /* flex-grow: 1 with a basis of `auto` (content) = each chip starts at
+     its natural content width and grows equally to fill the row. Result:
+     the chip with more text stays wider. Explicitly override the
+     desktop `width: 100%` that otherwise forces equal widths. */
+  .toolbarChips > * {
+    flex-grow: 1;
+    flex-shrink: 0;
+    flex-basis: auto;
+    width: auto;
+  }
   .toolbarChips button {
-    width: 100%;
     height: 32px;
     justify-content: flex-start;
     font-size: 14px;
@@ -1228,8 +1262,16 @@
   display: none;
 }
 @media (max-width: 767px) {
+  .sectionSubheader,
+  .sourcesHeading {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 12px;
+  }
   .sectionSubheaderHint {
     display: inline;
+    flex: 0 0 auto;
     font-size: 12px;
     font-weight: 400;
     color: var(--text-muted);

@@ -318,17 +318,22 @@ export default function SourcesSection() {
               gap: '16px',
               padding: '6px 12px',
             }}>
-              {sorted.length > visibleCount && (
-                <span
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => setVisibleCount(prev => prev + 20)}
-                  onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') setVisibleCount(prev => prev + 20) }}
-                  style={{ cursor: 'pointer', fontWeight: 400, color: 'var(--text)' }}
-                >
-                  Show 20 more
-                </span>
-              )}
+              {sorted.length > visibleCount && (() => {
+                const remaining = sorted.length - visibleCount
+                const nextChunk = Math.min(20, remaining)
+                const isInitial = visibleCount === 20
+                return (
+                  <span
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => setVisibleCount(prev => prev + nextChunk)}
+                    onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') setVisibleCount(prev => prev + nextChunk) }}
+                    style={{ cursor: 'pointer', fontWeight: 400, color: 'var(--text)' }}
+                  >
+                    {isInitial ? `Show next ${nextChunk}` : 'Next'}
+                  </span>
+                )
+              })()}
               {visibleCount > 20 && (
                 <span
                   role="button"
@@ -337,7 +342,7 @@ export default function SourcesSection() {
                   onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') setVisibleCount(prev => Math.max(20, prev - 20)) }}
                   style={{ cursor: 'pointer', fontWeight: 400, color: 'var(--text)' }}
                 >
-                  Show 20 less
+                  Back
                 </span>
               )}
               <span style={{ color: 'var(--text-muted)' }}>

@@ -69,6 +69,20 @@ export default function ProfilePanel({
       >
         <div className={styles.profilePanelHeader}>
           <div className={styles.profilePanelDragBar} aria-hidden="true" />
+          {isMobile && (
+            <div className={styles.profilePanelHeaderTitle}>
+              {shownContent.mode === 'company' ? (
+                <>
+                  <span className={styles.profileName}>{shownContent.company.name}</span>
+                  {shownContent.company.ticker && (
+                    <span className={styles.profileTicker}>{shownContent.company.ticker}</span>
+                  )}
+                </>
+              ) : (
+                <span className={styles.profileName}>{shownContent.edge.source} and {shownContent.edge.target}</span>
+              )}
+            </div>
+          )}
           <button type="button" className={styles.profilePanelClose} onClick={onClose}>
             Close
           </button>

@@ -230,6 +230,7 @@ export default function DealTable({ deals, hoveredEdge, scrollToDealId, onHoverE
             {sorted.length > visibleCount && (() => {
               const remaining = sorted.length - visibleCount
               const nextChunk = Math.min(PAGE_SIZE, remaining)
+              const isInitial = visibleCount === PAGE_SIZE
               return (
                 <span
                   role="button"
@@ -238,24 +239,21 @@ export default function DealTable({ deals, hoveredEdge, scrollToDealId, onHoverE
                   onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') setVisibleCount(prev => prev + nextChunk) }}
                   style={{ cursor: 'pointer', fontWeight: 400, color: 'var(--text)' }}
                 >
-                  Show {nextChunk} more
+                  {isInitial ? `Show next ${nextChunk}` : 'Next'}
                 </span>
               )
             })()}
-            {visibleCount > PAGE_SIZE && (() => {
-              const lastChunk = Math.min(PAGE_SIZE, visibleCount - PAGE_SIZE)
-              return (
-                <span
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => setVisibleCount(prev => Math.max(PAGE_SIZE, prev - PAGE_SIZE))}
-                  onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') setVisibleCount(prev => Math.max(PAGE_SIZE, prev - PAGE_SIZE)) }}
-                  style={{ cursor: 'pointer', fontWeight: 400, color: 'var(--text)' }}
-                >
-                  Show {lastChunk} less
-                </span>
-              )
-            })()}
+            {visibleCount > PAGE_SIZE && (
+              <span
+                role="button"
+                tabIndex={0}
+                onClick={() => setVisibleCount(prev => Math.max(PAGE_SIZE, prev - PAGE_SIZE))}
+                onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') setVisibleCount(prev => Math.max(PAGE_SIZE, prev - PAGE_SIZE)) }}
+                style={{ cursor: 'pointer', fontWeight: 400, color: 'var(--text)' }}
+              >
+                Back
+              </span>
+            )}
             <span style={{ color: 'var(--text-muted)' }}>
               Showing {Math.min(visibleCount, sorted.length) === sorted.length
                 ? `all ${sorted.length}`
