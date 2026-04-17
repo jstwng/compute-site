@@ -103,7 +103,7 @@ describe('ProfilePanel', () => {
     expect(onOpenCompany).toHaveBeenCalledWith('NVIDIA')
   })
 
-  it('renders counterparties ranked by deal count', () => {
+  it('renders counterparty filter dropdown with option counts', () => {
     const content = {
       mode: 'company',
       company: { name: 'NVIDIA', ticker: null },
@@ -130,10 +130,10 @@ describe('ProfilePanel', () => {
         onScrollToRow={() => {}}
       />
     )
-    expect(screen.getByText('Counterparties')).toBeInTheDocument()
-    // TSMC and SKH appear in both the Counterparties list and the Deals list.
-    expect(screen.getAllByText('TSMC').length).toBeGreaterThan(0)
-    expect(screen.getAllByText('SKH').length).toBeGreaterThan(0)
+    expect(screen.getByText('Counterparty:')).toBeInTheDocument()
+    // Default selection shows All with total deal count.
+    const trigger = screen.getByText('Counterparty:').closest('button')
+    expect(trigger.textContent).toContain('All (3)')
   })
 
   it('calls onClose when Close is clicked', () => {

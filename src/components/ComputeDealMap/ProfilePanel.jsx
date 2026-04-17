@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import styles from './styles.module.css'
 import { DEAL_TYPES } from './data.js'
+import Dropdown from './Dropdown.jsx'
 
 export default function ProfilePanel({
   content,
@@ -129,39 +130,33 @@ function CompanyMode({ content, onScrollToRow, onFocusCompany, timelineRange }) 
         )}
       </div>
 
-      {counterpartiesSorted.length > 0 && (
-        <div>
-          <div className={styles.profileSubhead}>Counterparties</div>
-          <ul className={styles.profileList}>
-            {counterpartiesSorted.map(([name, count]) => (
-              <li
-                key={name}
-                className={counterpartyFilter === name ? styles.profileRowActive : styles.profileRow}
-                onClick={() => onSetCounterpartyFilter(counterpartyFilter === name ? null : name)}
-              >
-                <span className={styles.profileRowName}>{name}</span>
-                <span className={styles.profileRowCount}>{count}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
+      {counterpartiesSorted.length > 0 && (() => {
+        const counterpartyOptions = [
+          { value: '__all__', label: `All (${deals.length})` },
+          ...counterpartiesSorted.map(([name, count]) => ({
+            value: name,
+            label: `${name} (${count})`,
+          })),
+        ]
+        const activeValue = counterpartyFilter ?? '__all__'
+        return (
+          <div className={styles.profileCounterpartyFilter}>
+            <Dropdown
+              label="Counterparty"
+              options={counterpartyOptions}
+              value={activeValue}
+              onChange={v => onSetCounterpartyFilter(v === '__all__' ? null : v)}
+              searchable
+              panelMaxHeight={260}
+            />
+          </div>
+        )
+      })()}
 
       {deals.length > 0 && (
         <div>
           <div className={styles.profileSubhead}>
-            {counterpartyFilter
-              ? <>Deals with {counterpartyFilter} · {filteredDeals.length}</>
-              : <>Deals · {filteredDeals.length}</>}
-            {counterpartyFilter && (
-              <button
-                type="button"
-                className={styles.profileClearFilter}
-                onClick={() => onSetCounterpartyFilter(null)}
-              >
-                Clear filter
-              </button>
-            )}
+            Deals · {filteredDeals.length}
           </div>
           <ul className={styles.profileDealList}>
             {filteredDeals.map(d => {
