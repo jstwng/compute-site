@@ -542,6 +542,16 @@ export default function Graph({ deals, hoveredEdge, onHoverEdge, hoveredNode, on
           <span>Click anywhere to expand</span>
         </button>
       )}
+      {isModal && hasFocus && hoveringCanvas && !hoveredNode && (
+        <button
+          type="button"
+          className={styles.graphExpandHint}
+          onClick={e => { e.stopPropagation(); setFocusedNodes(null); onHoverNode(null); setCardPinned(false) }}
+          aria-label="Reset view"
+        >
+          <span>Click anywhere to reset</span>
+        </button>
+      )}
       <svg
         className={styles.graphSvg}
         viewBox={`0 0 ${dims?.w || 800} ${dims?.h || 380}`}
@@ -555,6 +565,11 @@ export default function Graph({ deals, hoveredEdge, onHoverEdge, hoveredNode, on
         onClick={e => {
           if (e.target !== e.currentTarget) return
           if (maximizable && !isModal && onRequestMaximize) onRequestMaximize()
+          else if (isModal && hasFocus) {
+            setFocusedNodes(null)
+            onHoverNode(null)
+            setCardPinned(false)
+          }
         }}
       >
         <g>

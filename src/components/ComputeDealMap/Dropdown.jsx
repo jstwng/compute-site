@@ -170,7 +170,10 @@ export default function Dropdown({
         >
           <div style={{
             minHeight: 0,
-            overflow: 'hidden',
+            // Hidden during the close transition so content clips cleanly,
+            // visible once the panel is fully open so nested elements (the
+            // year search list inside Timeline, etc.) can show in full.
+            overflow: panelVisible ? 'visible' : 'hidden',
             display: 'flex',
             flexDirection: 'column',
           }}>
