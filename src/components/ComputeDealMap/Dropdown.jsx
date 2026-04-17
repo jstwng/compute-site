@@ -142,16 +142,20 @@ export default function Dropdown({
       {panelMounted && (
         <div
           style={{
-            position: 'absolute',
-            top: '100%',
-            left: 0,
-            marginTop: 0,
+            // On mobile, render the options list inline (in flow) so it
+            // pushes page/sheet content and scrolls naturally with the
+            // parent container. Absolute positioning here would clip
+            // inside the bottom-sheet or cut off below the viewport.
+            position: isMobile ? 'relative' : 'absolute',
+            top: isMobile ? 'auto' : '100%',
+            left: isMobile ? 'auto' : 0,
+            marginTop: isMobile ? '4px' : 0,
             border: '1px solid var(--border)',
             background: 'var(--bg)',
             zIndex: 1000,
-            minWidth: panelMinWidth ?? (children ? 'max-content' : '100%'),
-            width: children ? 'max-content' : undefined,
-            maxWidth: children ? 'none' : '320px',
+            minWidth: isMobile ? '100%' : (panelMinWidth ?? (children ? 'max-content' : '100%')),
+            width: isMobile ? '100%' : (children ? 'max-content' : undefined),
+            maxWidth: isMobile ? 'none' : (children ? 'none' : '320px'),
             boxSizing: 'border-box',
             // grid-template-rows: 0fr -> 1fr animates the INTRINSIC content
             // height symmetrically (no dead time on close), unlike max-height
