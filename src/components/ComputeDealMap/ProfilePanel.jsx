@@ -138,6 +138,7 @@ function CompanyMode({ content, onScrollToRow, timelineRange }) {
               onChange={v => onSetCounterpartyFilter(v === '__all__' ? null : v)}
               searchable
               panelMaxHeight={260}
+              nativeOnMobile
             />
           </div>
         )
