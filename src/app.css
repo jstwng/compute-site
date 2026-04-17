@@ -97,14 +97,14 @@
   .computePage.panelOpen { padding-right: 12px; }
   .graphBlock { height: min(46vh, 420px); min-height: 300px; }
   .computeTagline {
-    font-size: 13px;
+    font-size: 14px;
     max-width: none;
     display: -webkit-box;
     -webkit-line-clamp: 3;
     -webkit-box-orient: vertical;
     overflow: hidden;
   }
-  .computeTitleBy { font-size: 13px; }
+  .computeTitleBy { font-size: 14px; }
   .computeTaglineExpanded {
     -webkit-line-clamp: unset;
     overflow: visible;
@@ -136,7 +136,7 @@
     width: 100%;
     height: 36px !important;
     padding-right: 8px !important;
-    font-size: 13px !important;
+    font-size: 14px !important;
     -webkit-tap-highlight-color: transparent;
   }
 }
