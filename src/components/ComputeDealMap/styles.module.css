@@ -907,7 +907,6 @@
 .graphModalToolbar {
   flex: 0 0 auto;
   padding: 12px 16px 0;
-  border-bottom: 1px solid var(--border-soft);
 }
 .graphModalToolbar > div { margin-bottom: 12px; }
 
