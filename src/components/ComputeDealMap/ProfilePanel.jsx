@@ -23,7 +23,7 @@ export default function ProfilePanel({
       return
     }
     if (!shownContent) return
-    const t = setTimeout(() => setShownContent(null), 320)
+    const t = setTimeout(() => setShownContent(null), 400)
     return () => clearTimeout(t)
   }, [content, shownContent])
 
