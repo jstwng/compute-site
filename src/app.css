@@ -4,6 +4,15 @@
   padding: 16px 16px 28px;
   font-family: 'Inter', system-ui, sans-serif;
   color: var(--text);
+  transition: padding-right 300ms ease;
+}
+
+/* When the profile panel is open, shift the page's right edge inward by
+   the panel's width so nothing (graph nodes, table columns) is hidden
+   underneath the fixed-position panel. Transition matches the panel's
+   300ms slide so the graph and panel move in sync. */
+.computePage.panelOpen {
+  padding-right: calc(16px + clamp(320px, 28%, 440px));
 }
 
 .computeHeader {
@@ -36,6 +45,10 @@
 
 .computeTagline a:hover { text-decoration-color: var(--text-strong); }
 
+.computeTaglineToggle {
+  display: none;
+}
+
 .graphBlock {
   height: min(62vh, 560px);
   min-height: 380px;
@@ -64,4 +77,30 @@
 @media (max-width: 767px) {
   .computePage { padding: 12px 12px 24px; }
   .graphBlock { height: min(46vh, 420px); min-height: 300px; }
+  .computeTagline {
+    font-size: 13px;
+    max-width: none;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .computeTaglineExpanded {
+    -webkit-line-clamp: unset;
+    overflow: visible;
+  }
+  .computeTaglineToggle {
+    display: inline-block;
+    margin-top: 4px;
+    font: inherit;
+    font-size: 13px;
+    color: var(--text-muted);
+    background: transparent;
+    border: none;
+    padding: 0;
+    text-decoration: underline;
+    text-decoration-color: var(--link-underline);
+    text-underline-offset: 2px;
+    cursor: pointer;
+  }
 }
