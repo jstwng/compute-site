@@ -4,6 +4,7 @@ import styles from './styles.module.css'
 import { COMPANIES, findCompany } from './companies.js'
 import DealHoverCard from './DealHoverCard.jsx'
 import CompanyCard from './CompanyCard.jsx'
+import useMediaQuery from './useMediaQuery.js'
 
 const NODE_WIDTH = 100
 const NODE_HEIGHT = 36
@@ -354,6 +355,7 @@ export default function Graph({ deals, hoveredEdge, onHoverEdge, hoveredNode, on
   )
 
   const layoutReady = positions.size > 0
+  const isMobile = useMediaQuery('(max-width: 767px)')
 
   // If filters drop every focused node out of the dataset, reset focus.
   useEffect(() => {
@@ -634,7 +636,7 @@ export default function Graph({ deals, hoveredEdge, onHoverEdge, hoveredNode, on
           })}
         </g>
       </svg>
-      {layoutReady && !hoveredNode && hoveredEdgeAggregate && (() => {
+      {!isMobile && layoutReady && !hoveredNode && hoveredEdgeAggregate && (() => {
         const src = positions.get(hoveredEdge.source)
         const tgt = positions.get(hoveredEdge.target)
         const midX = src && tgt ? (src.x + src.w / 2 + tgt.x + tgt.w / 2) / 2 : cursor.x
@@ -649,7 +651,7 @@ export default function Graph({ deals, hoveredEdge, onHoverEdge, hoveredNode, on
           />
         )
       })()}
-      {layoutReady && hoveredNode && (() => {
+      {!isMobile && layoutReady && hoveredNode && (() => {
         const node = positions.get(hoveredNode)
         // Flip placement above/below the node based on whether the node
         // sits in the top or bottom half of the graph — keeps the card
