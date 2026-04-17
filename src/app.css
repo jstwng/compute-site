@@ -63,4 +63,5 @@
 
 @media (max-width: 767px) {
   .computePage { padding: 12px 12px 24px; }
+  .graphBlock { height: min(46vh, 420px); min-height: 300px; }
 }

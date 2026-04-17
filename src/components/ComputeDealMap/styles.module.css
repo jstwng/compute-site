@@ -1364,3 +1364,15 @@
   text-overflow: ellipsis;
   cursor: pointer;
 }
+
+@media (max-width: 767px) {
+  .graphExpandHint {
+    opacity: 1;
+    padding: 8px;
+  }
+  .graphReset {
+    min-width: 44px;
+    min-height: 44px;
+    padding: 10px;
+  }
+}
