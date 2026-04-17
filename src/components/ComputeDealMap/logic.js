@@ -26,8 +26,7 @@ export function applyFilters(deals, { dealType, category, search }) {
   return deals.filter(d => {
     if (dealType !== 'all' && d.deal_type !== dealType) return false
     if (category !== 'all') {
-      const cats = category === 'neocloud_ai' ? ['neocloud', 'ai_lab'] : [category]
-      if (!cats.includes(d.source_category) && !cats.includes(d.target_category)) return false
+      if (d.source_category !== category && d.target_category !== category) return false
     }
     if (q) {
       const hay = `${d.source} ${d.target} ${d.deal_type} ${d.description || ''}`.toLowerCase()
@@ -236,44 +235,154 @@ export function clusterCentroids(width, height) {
   return out
 }
 
-export function allShortestPaths(deals, origin, destination) {
-  if (origin === destination) return []
-  const adj = buildDirectedAdjacency(deals)
-  const distance = new Map([[origin, 0]])
-  const parents = new Map([[origin, []]])
-  let frontier = [origin]
-  let foundDepth = -1
-  while (frontier.length) {
-    const nextFrontier = []
-    for (const node of frontier) {
-      const out = adj.get(node)
-      if (!out) continue
-      const nodeDepth = distance.get(node)
-      if (foundDepth !== -1 && nodeDepth >= foundDepth) continue
-      for (const target of out) {
-        const newDepth = nodeDepth + 1
-        if (!distance.has(target)) {
-          distance.set(target, newDepth)
-          parents.set(target, [node])
-          nextFrontier.push(target)
-          if (target === destination) foundDepth = newDepth
-        } else if (distance.get(target) === newDepth) {
-          parents.get(target).push(node)
-        }
-      }
-    }
-    frontier = nextFrontier
-    if (foundDepth !== -1 && frontier.every(n => distance.get(n) >= foundDepth)) break
+// Strict value-chain rank for trace pathfinding. Lower rank = more upstream.
+// Edges A -> B are only kept in the trace adjacency when rank(A) < rank(B),
+// so every hop strictly advances down the supply chain — no same-tier
+// zigzags, no upstream backflow. Investor is intentionally absent: capital
+// flow isn't a value-chain hop, and including investors creates noisy
+// "investor X -> chip designer Y -> ... -> ai_lab" routes that obscure
+// the actual supply story (ASML -> TSMC -> NVIDIA -> Oracle -> OpenAI).
+//
+// Tiers are coarser than the CATEGORY_LAYOUT cols used for cluster layout:
+// the layout cares about visual grouping, the trace cares about whether
+// a hop makes value-chain sense.
+const TRACE_RANK = {
+  // Tier 0: fab tools (Lam, AMAT, ASML, KLA)
+  equipment: 0,
+  // Tier 1: silicon manufacturing — foundry, memory, and packaging are
+  // parallel branches that all produce chips/modules sold up to designers.
+  // Equipment makers supply all three, designers buy from all three.
+  foundry: 1,
+  memory: 1,
+  packaging: 1,
+  // Tier 2: chip design (sells finished SKUs to operators)
+  chip_designer: 2,
+  // Tier 3: server / infra suppliers to operators
+  server_oem: 3,
+  power: 3,
+  networking: 3,
+  // Tier 4: compute operators
+  data_center: 4,
+  neocloud: 4,
+  hyperscaler: 4,
+  // Tier 5: end consumers of compute
+  ai_lab: 5,
+}
+
+// Override map for companies that are mis-tagged in the upstream
+// `companies.yml` but whose real value-chain role is unambiguous. The
+// trace algorithm treats their effective category as the override
+// regardless of what the deal payload says, so canonical paths like
+// ASML -> TSMC -> NVIDIA -> Oracle -> OpenAI survive even when TSMC's
+// raw tag is `chip_designer`.
+//
+// Push these fixes upstream when you can; this map is the stop-gap.
+const CATEGORY_OVERRIDES = {
+  TSMC: 'foundry',
+  'Samsung Foundry': 'foundry',
+  // SMIC / GlobalFoundries / UMC / Tower already correctly tagged.
+}
+
+function effectiveCategory(name, rawCategory) {
+  return CATEGORY_OVERRIDES[name] ?? rawCategory
+}
+
+// Maximum value-chain tiers a single hop is allowed to skip. With
+// MAX_TIER_JUMP = 2, each step in a trace path advances at most two
+// tiers — so equipment can hop into foundry/memory/packaging (jump 1)
+// or all the way to chip_designer (jump 2), but cannot shortcut directly
+// to operators or labs. This kills noisy 2-hop paths like
+// ASML -> SK Hynix -> OpenAI (memory jumping straight to ai_lab) while
+// preserving the canonical 4-hop ASML -> TSMC -> NVIDIA -> Oracle -> OpenAI
+// supply-chain walk.
+const MAX_TIER_JUMP = 2
+
+// Strict adjacency for trace: requires both endpoints to be ranked, hop
+// strictly downstream (sRank < tRank), AND the hop spans at most
+// MAX_TIER_JUMP tiers. Result is paths that "trace" the value chain
+// properly instead of skipping straight from raw materials to end users.
+export function buildTraceAdjacency(deals) {
+  const adj = new Map()
+  for (const d of deals) {
+    if (!d.source || !d.target || d.source === d.target) continue
+    const sCat = effectiveCategory(d.source, d.source_category)
+    const tCat = effectiveCategory(d.target, d.target_category)
+    const sRank = TRACE_RANK[sCat]
+    const tRank = TRACE_RANK[tCat]
+    if (sRank == null || tRank == null) continue
+    if (sRank >= tRank) continue
+    if (tRank - sRank > MAX_TIER_JUMP) continue
+    if (!adj.has(d.source)) adj.set(d.source, new Set())
+    adj.get(d.source).add(d.target)
   }
-  if (!parents.has(destination)) return []
+  return adj
+}
+
+// Per-node effective category lookup. Used by the UI to label each path
+// stop with its tier (so the user can see "ASML [equipment] -> TSMC [foundry]
+// -> ..."). Exported because both App.jsx and Toolbar.jsx need it.
+export function nodeEffectiveCategory(deals, name) {
+  if (!name) return null
+  if (CATEGORY_OVERRIDES[name]) return CATEGORY_OVERRIDES[name]
+  for (const d of deals) {
+    if (d.source === name && d.source_category) return d.source_category
+    if (d.target === name && d.target_category) return d.target_category
+  }
+  return null
+}
+
+// All directed simple paths from origin to destination. Uses the strict
+// trace adjacency by default so every path advances strictly downstream
+// in the value chain. Pass `strictValueChain: false` to fall back to
+// the loose adjacency (used by tests with abstract fixtures).
+//
+// Caps keep the result usable for hub queries (NVIDIA, TSMC) where the
+// raw path count would otherwise explode:
+//   - maxDepth = 8 nodes (up to 7 hops). Anything deeper is unlikely to
+//     read as a coherent supply chain story.
+//   - maxPaths = 200. The Trace UI buckets paths by hop count; 200 is
+//     the upper bound before even the bucketing breaks down.
+//
+// Output is sorted shortest-first, then lexicographically for stable
+// ordering across renders.
+export function allDirectedPaths(deals, origin, destination, opts = {}) {
+  if (origin === destination) return []
+  const strict = opts.strictValueChain !== false
+  const adj = strict ? buildTraceAdjacency(deals) : buildDirectedAdjacency(deals)
+  if (!adj.has(origin)) return []
+
+  const maxDepth = opts.maxDepth ?? 8
+  const maxPaths = opts.maxPaths ?? 200
+
   const paths = []
-  function walk(node, acc) {
-    if (node === origin) {
-      paths.push([origin, ...acc])
+  const visited = new Set([origin])
+  const path = [origin]
+
+  function dfs(node) {
+    if (paths.length >= maxPaths) return
+    if (path.length > maxDepth) return
+    if (node === destination) {
+      paths.push([...path])
       return
     }
-    for (const p of parents.get(node)) walk(p, [node, ...acc])
+    const neighbors = adj.get(node)
+    if (!neighbors) return
+    for (const next of neighbors) {
+      if (visited.has(next)) continue
+      visited.add(next)
+      path.push(next)
+      dfs(next)
+      path.pop()
+      visited.delete(next)
+    }
   }
-  walk(destination, [])
+
+  dfs(origin)
+  paths.sort((a, b) => a.length - b.length || a.join('>').localeCompare(b.join('>')))
   return paths
 }
+
+// Backwards-compatible alias. The Trace UI calls this name; semantics
+// changed from "shortest-only" to "all directed paths" (capped) per
+// product feedback that ASML -> OpenAI was hiding the TSMC route.
+export const allShortestPaths = allDirectedPaths

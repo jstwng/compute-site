@@ -1,7 +1,7 @@
-import { useMemo, useState, useEffect, useCallback } from 'react'
+import { useMemo, useState, useEffect, useCallback, useRef, useLayoutEffect } from 'react'
 import styles from './components/ComputeDealMap/styles.module.css'
 import { DEALS, EARLIEST_DATE, LATEST_DATE } from './components/ComputeDealMap/data.js'
-import { COMPANIES } from './components/ComputeDealMap/companies.js'
+import { COMPANIES, CATEGORIES } from './components/ComputeDealMap/companies.js'
 import {
   applyFilters,
   perCompanyAggregates,
@@ -9,6 +9,7 @@ import {
   inDateRange,
   reachableFrom,
   edgeDealTypes,
+  nodeEffectiveCategory,
 } from './components/ComputeDealMap/logic.js'
 import Toolbar from './components/ComputeDealMap/Toolbar.jsx'
 import FilterBar from './components/ComputeDealMap/FilterBar.jsx'
@@ -30,6 +31,17 @@ const DEFAULT_TIMELINE = { from: EARLIEST_DATE, to: LATEST_DATE }
 export default function App() {
   const isMobile = useMediaQuery('(max-width: 767px)')
   const [taglineExpanded, setTaglineExpanded] = useState(false)
+  const taglineInnerRef = useRef(null)
+  const [taglineFullHeight, setTaglineFullHeight] = useState(0)
+  useLayoutEffect(() => {
+    const el = taglineInnerRef.current
+    if (!el || typeof ResizeObserver === 'undefined') return
+    const measure = () => setTaglineFullHeight(el.scrollHeight)
+    measure()
+    const ro = new ResizeObserver(measure)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
   const [filters, setFilters] = useState({ dealType: 'all', category: 'all', search: '' })
   const [hoveredEdge, setHoveredEdge] = useState(null)
   const [hoveredNode, setHoveredNode] = useState(null)
@@ -49,6 +61,10 @@ export default function App() {
   // Always points to a specific path index (0..n-1) when paths exist;
   // 0 by default. There's no "all paths" mode.
   const [tracePathIndex, setTracePathIndex] = useState(0)
+  // Hop-count filter for the trace path picker. null = show all lengths.
+  // Auto-defaults to the shortest available length when paths first load
+  // so the user lands on the most relevant chip without a click.
+  const [tracePathLength, setTracePathLength] = useState(null)
   const [timelineRange, setTimelineRange] = useState(DEFAULT_TIMELINE)
   // Multi-select: Set of category slugs currently highlighted as a cluster.
   const [clusterCategories, setClusterCategories] = useState(() => new Set())
@@ -98,6 +114,12 @@ export default function App() {
   }, [])
 
   const handleClearCluster = useCallback(() => setClusterCategories(new Set()), [])
+
+  const handleClearAllFilters = useCallback(() => {
+    resetTrace()
+    setTimelineRange(DEFAULT_TIMELINE)
+    setClusterCategories(new Set())
+  }, [resetTrace])
 
   const isTimelineActive =
     timelineRange.from !== EARLIEST_DATE || timelineRange.to !== LATEST_DATE
@@ -159,10 +181,77 @@ export default function App() {
     setTracePathIndex(0)
   }, [traceDestination])
 
-  // Clamp tracePathIndex into the available paths range so an out-of-bounds
+  // Hop-count buckets: { len: number, count: number }[], sorted ascending.
+  // Hop count == path.length - 1 (edges), surfaced to the user instead of
+  // node-count so the chip label matches the way they describe the path.
+  const tracePathBuckets = useMemo(() => {
+    if (!tracePaths || tracePaths.length === 0) return []
+    const counts = new Map()
+    for (const p of tracePaths) {
+      const hops = p.length - 1
+      counts.set(hops, (counts.get(hops) || 0) + 1)
+    }
+    return [...counts.entries()]
+      .map(([len, count]) => ({ len, count }))
+      .sort((a, b) => a.len - b.len)
+  }, [tracePaths])
+
+  // Reset/auto-default the hop-count filter whenever the path set changes
+  // (new origin/destination/data). Pick the shortest available length so
+  // the user lands on the most coherent route without an extra click.
+  useEffect(() => {
+    if (!tracePaths || tracePaths.length === 0) {
+      setTracePathLength(null)
+      return
+    }
+    const shortest = tracePathBuckets[0]?.len ?? null
+    setTracePathLength(prev => {
+      // Keep the existing filter if it's still valid for the new bucket set.
+      const stillValid = tracePathBuckets.some(b => b.len === prev)
+      return stillValid ? prev : shortest
+    })
+    setTracePathIndex(0)
+  }, [tracePaths, tracePathBuckets])
+
+  // Filtered view: paths matching the current hop-count chip. The Toolbar
+  // renders this list; the graph still highlights the active path index
+  // within the FILTERED list.
+  const visibleTracePaths = useMemo(() => {
+    if (!tracePaths || tracePaths.length === 0) return tracePaths
+    if (tracePathLength == null) return tracePaths
+    return tracePaths.filter(p => p.length - 1 === tracePathLength)
+  }, [tracePaths, tracePathLength])
+
+  // Group visible paths by value-chain SHAPE (sequence of category tiers).
+  // 42 paths from ASML to OpenAI collapses to ~4 shapes; the user scans
+  // shapes to pick a "kind" of route, then picks the specific company
+  // route within. Each group: { shape: ['equipment', 'foundry', ...],
+  // shapeLabel: 'Equipment > Foundry > Chip Designer > ...', paths: [...],
+  // pathStartIndex: number (offset into visibleTracePaths so the picker
+  // can map a path to its global tracePathIndex). }
+  const tracePathGroups = useMemo(() => {
+    if (!visibleTracePaths || visibleTracePaths.length === 0) return null
+    const groups = new Map()
+    visibleTracePaths.forEach((p, i) => {
+      const shape = p.map(n => nodeEffectiveCategory(traceDeals, n) || '?')
+      const key = shape.join('>')
+      if (!groups.has(key)) {
+        const shapeLabel = shape
+          .map(s => CATEGORIES[s]?.label || s.replace(/_/g, ' '))
+          .join(' · ')
+        groups.set(key, { shape, shapeLabel, paths: [], indices: [] })
+      }
+      const g = groups.get(key)
+      g.paths.push(p)
+      g.indices.push(i)
+    })
+    return [...groups.values()]
+  }, [visibleTracePaths, traceDeals])
+
+  // Clamp tracePathIndex into the FILTERED range so an out-of-bounds
   // index from a previous selection never breaks rendering.
-  const safePathIndex = (tracePaths && tracePaths.length > 0)
-    ? Math.min(Math.max(tracePathIndex, 0), tracePaths.length - 1)
+  const safePathIndex = (visibleTracePaths && visibleTracePaths.length > 0)
+    ? Math.min(Math.max(tracePathIndex, 0), visibleTracePaths.length - 1)
     : 0
 
   const tracePathNodes = useMemo(() => {
@@ -170,19 +259,19 @@ export default function App() {
     // — keeps the graph quiet (just two lit nodes) instead of falling back
     // to the default "everything dim" view.
     if (!traceOrigin || !traceDestination) return null
-    if (tracePaths && tracePaths.length > 0) {
-      return new Set(tracePaths[safePathIndex])
+    if (visibleTracePaths && visibleTracePaths.length > 0) {
+      return new Set(visibleTracePaths[safePathIndex])
     }
     return new Set([traceOrigin, traceDestination])
-  }, [traceOrigin, traceDestination, tracePaths, safePathIndex])
+  }, [traceOrigin, traceDestination, visibleTracePaths, safePathIndex])
 
   const tracePathEdges = useMemo(() => {
-    if (!tracePaths || tracePaths.length === 0) return null
+    if (!visibleTracePaths || visibleTracePaths.length === 0) return null
     const set = new Set()
-    const p = tracePaths[safePathIndex]
+    const p = visibleTracePaths[safePathIndex]
     for (let i = 0; i < p.length - 1; i++) set.add(`${p[i]}__${p[i + 1]}`)
     return set
-  }, [tracePaths, safePathIndex])
+  }, [visibleTracePaths, safePathIndex])
 
   const clusterHighlightSet = useMemo(() => {
     if (clusterCategories.size === 0) return null
@@ -285,8 +374,8 @@ export default function App() {
   }, [isTimelineActive, timelineDeals, filteredDeals, pathDealIds])
 
   const tableBanner = (() => {
-    if (pathDealIds && tracePaths && tracePaths.length > 0) {
-      const pathLabel = tracePaths.length > 1 ? `Path ${safePathIndex + 1}` : 'the path'
+    if (pathDealIds && visibleTracePaths && visibleTracePaths.length > 0) {
+      const pathLabel = visibleTracePaths.length > 1 ? `Path ${safePathIndex + 1}` : 'the path'
       return (
         <>
           <span>
@@ -342,10 +431,15 @@ export default function App() {
         <h1 className="computeTitle">
           ai ecosystem transactions <span className="computeTitleBy">by <a href="https://jstwng.com" target="_blank" rel="noreferrer">justin wang</a></span>
         </h1>
-        <p className={`computeTagline${taglineExpanded ? ' computeTaglineExpanded' : ''}`}>
-          a structured, source-backed dataset of publicly disclosed ai ecosystem transactions across sovereign AI, hyperscaler capex, custom silicon, and the hardware providers behind them. last updated {BUILD_DATE_LABEL}. source data public repository{' '}
-          <a href="https://github.com/jstwng/compute-deal-map-data" target="_blank" rel="noreferrer">here</a>.
-        </p>
+        <div
+          className={`computeTagline${taglineExpanded ? ' computeTaglineExpanded' : ''}`}
+          style={taglineFullHeight ? { '--tagline-full-h': `${taglineFullHeight}px` } : undefined}
+        >
+          <p ref={taglineInnerRef} className="computeTaglineInner">
+            a structured, source-backed dataset of publicly disclosed ai ecosystem transactions across sovereign AI, hyperscaler capex, custom silicon, and the hardware providers behind them. last updated {BUILD_DATE_LABEL}. source data public repository{' '}
+            <a href="https://github.com/jstwng/compute-deal-map-data" target="_blank" rel="noreferrer">here</a>.
+          </p>
+        </div>
         <button
           type="button"
           className="computeTaglineToggle"
@@ -361,8 +455,12 @@ export default function App() {
         traceOrigin={traceOrigin}
         traceDestination={traceDestination}
         reachableFromOrigin={reachableFromOrigin}
-        tracePaths={tracePaths}
+        tracePaths={visibleTracePaths}
         tracePathIndex={safePathIndex}
+        tracePathBuckets={tracePathBuckets}
+        tracePathLength={tracePathLength}
+        onSelectTracePathLength={setTracePathLength}
+        tracePathGroups={tracePathGroups}
         traceNoPath={traceNoPath}
         traceNoPathBoth={traceNoPathBoth}
         onChangeTraceOrigin={handleChangeTraceOrigin}
@@ -430,8 +528,12 @@ export default function App() {
                   traceOrigin={traceOrigin}
                   traceDestination={traceDestination}
                   reachableFromOrigin={reachableFromOrigin}
-                  tracePaths={tracePaths}
+                  tracePaths={visibleTracePaths}
                   tracePathIndex={safePathIndex}
+                  tracePathBuckets={tracePathBuckets}
+                  tracePathLength={tracePathLength}
+                  onSelectTracePathLength={setTracePathLength}
+                  tracePathGroups={tracePathGroups}
                   traceNoPath={traceNoPath}
                   traceNoPathBoth={traceNoPathBoth}
                   onChangeTraceOrigin={handleChangeTraceOrigin}
@@ -450,6 +552,15 @@ export default function App() {
                   onClearCluster={handleClearCluster}
                   pathEdgeTypes={pathEdgeTypes}
                 />
+                {(traceOrigin || traceDestination || isTimelineActive || clusterCategories.size > 0) && (
+                  <button
+                    type="button"
+                    className={styles.graphModalClearAll}
+                    onClick={handleClearAllFilters}
+                  >
+                    Clear all
+                  </button>
+                )}
                 <button
                   type="button"
                   className={styles.graphModalClose}
@@ -470,6 +581,12 @@ export default function App() {
                   hoveredNode={hoveredNode}
                   onHoverNode={setHoveredNode}
                   onScrollToRow={id => setScrollToDealId(id)}
+                  pathNodes={tracePathNodes}
+                  pathEdges={tracePathEdges}
+                  dimAll={false}
+                  activeNodeSet={activeNodeSet}
+                  activeEdgeSet={activeEdgeSet}
+                  highlightNodeSet={clusterHighlightSet}
                   isModal
                   maximizable={false}
                 />

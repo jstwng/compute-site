@@ -52,6 +52,10 @@
   max-width: 640px;
 }
 
+.computeTaglineInner {
+  margin: 0;
+}
+
 .computeTagline a {
   color: var(--text);
   text-decoration: underline;
@@ -107,15 +111,29 @@
   .computeTagline {
     font-size: 14px;
     max-width: none;
-    display: -webkit-box;
-    -webkit-line-clamp: 3;
-    -webkit-box-orient: vertical;
+    /* JS measures the paragraph's intrinsic height and exposes it via
+       --tagline-full-h, so max-height animates pixel-for-pixel from the
+       collapsed 3-line clamp to the exact content height. No dead time
+       at either end, which is where the earlier grid / oversized max-height
+       approaches felt snappy. */
+    max-height: calc(1.5em * 3);
     overflow: hidden;
+    /* Mirror the Dropdown transition (same curve + duration) so the
+       tagline reveal feels consistent with the rest of the site. */
+    transition: max-height 320ms cubic-bezier(0.22, 0.61, 0.36, 1);
+    will-change: max-height;
   }
+  .computeTaglineInner {
+    opacity: 0.8;
+    transition: opacity 240ms cubic-bezier(0.22, 0.61, 0.36, 1);
+  }
+  .computeTaglineExpanded .computeTaglineInner {
+    opacity: 1;
+  }
+  .computeTitle { font-size: 16px; }
   .computeTitleBy { font-size: 14px; }
   .computeTaglineExpanded {
-    -webkit-line-clamp: unset;
-    overflow: visible;
+    max-height: var(--tagline-full-h, 40em);
   }
   .computeTaglineToggle {
     display: inline-block;

@@ -112,14 +112,24 @@ export default function ProfilePanel({
 function PanelDealExpand({ isOpen, children }) {
   const [mounted, setMounted] = useState(isOpen)
   const [visible, setVisible] = useState(false)
+  // Double rAF on open: a single rAF races React's batched commit so the
+  // closed state (grid-template-rows: 0fr, opacity: 0) never gets a paint
+  // frame and the open transition snaps. Two rAFs guarantee a paint of
+  // the closed state in between, making open mirror the close transition.
   useEffect(() => {
     if (isOpen) {
       setMounted(true)
-      const raf = requestAnimationFrame(() => setVisible(true))
-      return () => cancelAnimationFrame(raf)
+      let raf2 = 0
+      const raf1 = requestAnimationFrame(() => {
+        raf2 = requestAnimationFrame(() => setVisible(true))
+      })
+      return () => {
+        cancelAnimationFrame(raf1)
+        if (raf2) cancelAnimationFrame(raf2)
+      }
     }
     setVisible(false)
-    const t = setTimeout(() => setMounted(false), 340)
+    const t = setTimeout(() => setMounted(false), 400)
     return () => clearTimeout(t)
   }, [isOpen])
   if (!mounted) return null

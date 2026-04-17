@@ -1,8 +1,46 @@
-import { Fragment, useEffect, useMemo, useState } from 'react'
+import { Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import styles from './styles.module.css'
 import { DEAL_TYPES } from './data.js'
 import { sortDeals } from './logic.js'
 import useMediaQuery from './useMediaQuery.js'
+
+// Smooth height transition for the desktop description cell. Measures the
+// element's scrollHeight (always reports full content height regardless of
+// the current clipped overflow) and animates `height` between a one-line
+// collapsed state and the measured full-content state. Same 380ms
+// cubic-bezier curve as the mobile expand row so desktop and mobile feel
+// identical when toggling.
+function DescAnim({ expanded, children }) {
+  const ref = useRef(null)
+  const [contentH, setContentH] = useState(0)
+
+  useLayoutEffect(() => {
+    if (ref.current) setContentH(ref.current.scrollHeight)
+  }, [children])
+
+  useEffect(() => {
+    const onResize = () => {
+      if (ref.current) setContentH(ref.current.scrollHeight)
+    }
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [])
+
+  return (
+    <div
+      ref={ref}
+      style={{
+        height: expanded && contentH > 0 ? `${contentH}px` : '1.4em',
+        overflow: 'hidden',
+        whiteSpace: 'normal',
+        wordBreak: 'break-word',
+        transition: 'height 380ms cubic-bezier(0.22, 0.61, 0.36, 1)',
+      }}
+    >
+      {children}
+    </div>
+  )
+}
 
 // Animated expand/collapse — same grid-template-rows pattern the Dropdown
 // panel uses, so opening and closing both animate symmetrically. Mounts
@@ -10,14 +48,24 @@ import useMediaQuery from './useMediaQuery.js'
 function MobileExpandRow({ isOpen, colSpan, children }) {
   const [mounted, setMounted] = useState(isOpen)
   const [visible, setVisible] = useState(false)
+  // Double rAF on open: a single rAF races React's batched commit so the
+  // closed state never gets a paint frame and the open transition snaps.
+  // Two rAFs guarantee a paint of the closed state in between, making
+  // open mirror the close transition.
   useEffect(() => {
     if (isOpen) {
       setMounted(true)
-      const raf = requestAnimationFrame(() => setVisible(true))
-      return () => cancelAnimationFrame(raf)
+      let raf2 = 0
+      const raf1 = requestAnimationFrame(() => {
+        raf2 = requestAnimationFrame(() => setVisible(true))
+      })
+      return () => {
+        cancelAnimationFrame(raf1)
+        if (raf2) cancelAnimationFrame(raf2)
+      }
     }
     setVisible(false)
-    const t = setTimeout(() => setMounted(false), 340)
+    const t = setTimeout(() => setMounted(false), 400)
     return () => clearTimeout(t)
   }, [isOpen])
   if (!mounted) return null
@@ -144,7 +192,6 @@ export default function DealTable({ deals, hoveredEdge, scrollToDealId, onHoverE
             const highlighted = hoverKey === dealKey
             const flashing = flashedId === d.id
             const expanded = expandedId === d.id
-            const descClass = expanded ? styles.descTextExpanded : styles.descTextTruncated
             const type = DEAL_TYPES[d.deal_type]
             const description = d.description?.endsWith('.') ? d.description : `${d.description ?? ''}.`
             const rowClasses = [
@@ -231,9 +278,9 @@ export default function DealTable({ deals, hoveredEdge, scrollToDealId, onHoverE
                 <td className={styles.valueCell}>{d.value_display}</td>
                 <td>{d.date_display}</td>
                 <td className={styles.descCell}>
-                  <div className={descClass}>
+                  <DescAnim expanded={expanded}>
                     {description}
-                  </div>
+                  </DescAnim>
                 </td>
                 <td style={{ textAlign: 'center' }} onClick={e => e.stopPropagation()}>
                   <a className={styles.sourceLink} href={d.source_url} target="_blank" rel="noreferrer">↗</a>

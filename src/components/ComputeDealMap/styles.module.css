@@ -194,7 +194,14 @@
     border-left: none;
     border-top: 1px solid var(--border);
     transform: translateY(100%);
-    transition: transform 380ms cubic-bezier(0.22, 0.61, 0.36, 1);
+    /* `interpolate-size: allow-keywords` + transitioning `height` lets the
+       sheet animate from its intrinsic content height to a taller intrinsic
+       height when a dropdown opens inside it (Safari 18+/Chrome 129+).
+       Falls back to instant resize on older browsers without breaking. */
+    interpolate-size: allow-keywords;
+    transition:
+      transform 380ms cubic-bezier(0.22, 0.61, 0.36, 1),
+      height 380ms cubic-bezier(0.22, 0.61, 0.36, 1);
     z-index: 1200;
     /* Two-row layout: header is pinned flex:0, body scrolls flex:1.
        Matches the MobileFilterSheet so the title + close never drift
@@ -202,6 +209,13 @@
     display: flex;
     flex-direction: column;
     overflow: hidden;
+  }
+  /* Same interpolation hint on the body so its scrollable region grows
+     smoothly with the dropdown's grid-template-rows transition rather
+     than snapping when a child's intrinsic size changes. */
+  .profilePanelBody {
+    interpolate-size: allow-keywords;
+    transition: height 380ms cubic-bezier(0.22, 0.61, 0.36, 1);
   }
   .profilePanelOpen {
     transform: translateY(0);
@@ -236,8 +250,7 @@
     flex: 0 0 auto;
     background: var(--bg);
     margin: 0;
-    padding: 4px 14px 8px;
-    border-bottom: 1px solid var(--border);
+    padding: 12px 14px 8px;
     display: grid;
     grid-template-columns: 1fr auto;
     grid-template-rows: auto auto;
@@ -461,43 +474,167 @@
   flex-wrap: nowrap;
 }
 
-/* Path list — inline plain-text path breakdown (no dropdown box). Active path
-   is bold; click to select when multiple paths exist. Multi-edge paths list
-   each hop under the active row. */
+/* Hop-count chip strip above the trace path list. Click a chip to filter
+   the path list to just that hop count; "All" shows everything. Side
+   padding matches the path list below so the column reads as one block. */
+.toolbarHopChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 8px 12px 4px;
+}
+@media (max-width: 767px) {
+  .toolbarHopChips { padding: 8px 14px 4px; }
+}
+
+.toolbarHopChip,
+.toolbarHopChipActive {
+  font: inherit;
+  font-size: 11px;
+  padding: 3px 8px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  white-space: nowrap;
+  border-radius: 0;
+  transition: background 120ms ease, color 120ms ease, border-color 120ms ease;
+}
+.toolbarHopChip { opacity: 0.7; }
+.toolbarHopChip:hover { opacity: 1; border-color: var(--text-muted); }
+.toolbarHopChipActive {
+  font-weight: 600;
+  background: var(--text);
+  color: var(--bg);
+  border-color: var(--text);
+}
+.toolbarHopChipCount {
+  margin-left: 4px;
+  opacity: 0.65;
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+}
+.toolbarHopChipActive .toolbarHopChipCount { opacity: 0.8; }
+
+@media (max-width: 767px) {
+  .toolbarHopChip,
+  .toolbarHopChipActive {
+    font-size: 13px;
+    padding: 6px 10px;
+  }
+}
+
+/* Path list — grouped by value-chain shape. Each row is a flex-wrapping
+   flow of company-name pills connected by muted "to" labels. Click a row
+   to mark it active (graph highlight) and reveal its hop breakdown. */
 .toolbarPathList {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
   font-size: 12px;
   color: var(--text);
-  padding-top: 2px;
+  padding: 8px 12px 4px;
+  /* Cap the path list at a sensible viewport-aware height so a query that
+     returns 30+ paths scrolls within the dropdown instead of pushing the
+     panel off-screen. From/To row, hop chips, and Swap/Clear stay pinned. */
+  max-height: min(360px, calc(100vh - 280px));
+  overflow-y: auto;
 }
 
 .toolbarPathItem {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 4px;
 }
 
-.toolbarPathRow,
-.toolbarPathRowActive {
+/* Path group header — value-chain shape label that titles a cluster of
+   specific company routes sharing the same category sequence. */
+.toolbarPathGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-top: 6px;
+}
+.toolbarPathGroup:first-child { padding-top: 0; }
+
+.toolbarPathShapeLabel {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  white-space: normal;
+  line-height: 1.35;
+  padding: 2px 0 4px;
+}
+.toolbarPathShapeCount {
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-muted);
+  opacity: 0.7;
+}
+
+@media (max-width: 767px) {
+  .toolbarPathList {
+    padding: 8px 14px 4px;
+    /* On mobile the path list lives inside MobileFilterSheet which has
+       its own scrollable body; let the sheet handle scroll instead of
+       nesting two scrollable regions. */
+    max-height: none;
+    overflow-y: visible;
+  }
+  .toolbarPathShapeLabel { font-size: 11px; }
+}
+
+.toolbarPathRow {
   font: inherit;
   font-size: 12px;
   background: transparent;
   border: none;
-  padding: 0;
+  padding: 6px 8px;
+  margin: 0 -8px;
   color: var(--text);
   text-align: left;
+  cursor: pointer;
+  display: block;
+  width: calc(100% + 16px);
+  border-radius: 2px;
+  transition: background 120ms ease;
+}
+.toolbarPathRow:hover { background: rgba(255, 255, 255, 0.04); }
+.toolbarPathRowStatic { cursor: default; }
+.toolbarPathRowStatic:hover { background: transparent; }
+
+.toolbarPathRowActive {
+  background: rgba(255, 255, 255, 0.06);
+}
+.toolbarPathRowActive .toolbarPathNode { font-weight: 700; }
+.toolbarPathRowActive:hover { background: rgba(255, 255, 255, 0.08); }
+
+/* Pill flow inside a path row. Uses tight middot separators so a long
+   walk like ASML · TSMC · NVIDIA · Microsoft · OpenAI reads as one
+   visual unit; flex-wrap lets it break across lines on narrow widths. */
+.toolbarPathFlow {
+  display: inline;
+  line-height: 1.5;
+}
+.toolbarPathNode {
+  font-weight: 500;
+  color: var(--text);
   white-space: nowrap;
 }
-.toolbarPathRow {
-  cursor: pointer;
-  opacity: 0.7;
+.toolbarPathConnector {
+  /* Surrounding {' '} in JSX provides the spacing + break opportunity;
+     no extra margin needed. */
+  color: var(--text-muted);
+  opacity: 0.55;
 }
-.toolbarPathRow:hover { opacity: 1; }
-.toolbarPathRowActive {
-  font-weight: 600;
-  cursor: default;
+
+@media (max-width: 767px) {
+  .toolbarPathRow { font-size: 13px; padding: 8px; }
 }
 
 .toolbarPathEdges {
@@ -623,13 +760,16 @@
   }
   /* flex-grow: 1 with a basis of `auto` (content) = each chip starts at
      its natural content width and grows equally to fill the row. Result:
-     the chip with more text stays wider. Explicitly override the
-     desktop `width: 100%` that otherwise forces equal widths. */
+     the chip with more text stays wider. flex-shrink: 1 + min-width: 0
+     lets a chip with very long text (e.g. "Trace: Applied Materials to
+     OpenAI") shrink instead of overflowing — its inner text gets ellipsis
+     via the overflow rules on .toolbarMobileChip. */
   .toolbarChips > * {
     flex-grow: 1;
-    flex-shrink: 0;
+    flex-shrink: 1;
     flex-basis: auto;
     width: auto;
+    min-width: 0;
   }
   .toolbarChips button {
     height: 32px;
@@ -873,25 +1013,6 @@
   from { opacity: 0; }
 }
 
-.graphReset {
-  position: absolute;
-  top: 12px;
-  right: 12px;
-  z-index: 2;
-  background: transparent;
-  border: none;
-  padding: 4px;
-  font: inherit;
-  font-size: 11px;
-  font-weight: 400;
-  letter-spacing: 0;
-  text-transform: none;
-  color: var(--text-muted);
-  cursor: pointer;
-  transition: color 150ms ease;
-}
-.graphReset:hover { color: var(--text); }
-
 .graphClose {
   position: absolute;
   top: 12px;
@@ -1006,6 +1127,28 @@
   transition: color 150ms ease;
 }
 .graphModalClose:hover { color: var(--text); }
+
+/* Shows up in the modal toolbar header when any of Trace / Timeline /
+   Cluster is active. Single click resets all three. */
+.graphModalClearAll {
+  flex: 0 0 auto;
+  align-self: center;
+  background: transparent;
+  border: none;
+  padding: 4px 6px;
+  color: var(--text-muted);
+  cursor: pointer;
+  font: inherit;
+  font-size: 11px;
+  text-decoration: underline;
+  text-decoration-color: var(--link-underline);
+  text-underline-offset: 2px;
+  transition: color 150ms ease, text-decoration-color 150ms ease;
+}
+.graphModalClearAll:hover {
+  color: var(--text);
+  text-decoration-color: var(--text-strong);
+}
 
 .graphModalGraphSlot {
   flex: 1 1 auto;
@@ -1385,13 +1528,15 @@
   max-width: none !important;
 }
 /* grid-template-rows 0fr <-> 1fr animates the intrinsic content height
-   symmetrically for both open and close — same pattern the dropdown
-   panel uses. */
+   symmetrically for both open and close. Duration + curve matched to the
+   Dropdown panel (380ms / 280ms) so the close doesn't feel chopped at the
+   260ms mark — opacity now lands inside the height transition with
+   enough room to breathe. */
 .mobileTableExpandOuter {
   display: grid;
   grid-template-rows: 0fr;
   opacity: 0;
-  transition: grid-template-rows 320ms cubic-bezier(0.22, 0.61, 0.36, 1), opacity 260ms cubic-bezier(0.22, 0.61, 0.36, 1);
+  transition: grid-template-rows 380ms cubic-bezier(0.22, 0.61, 0.36, 1), opacity 280ms cubic-bezier(0.22, 0.61, 0.36, 1);
 }
 .mobileTableExpandOuterOpen {
   grid-template-rows: 1fr;
@@ -1472,11 +1617,13 @@
   background: rgba(0, 0, 0, 0.5);
   display: flex;
   align-items: flex-end;
-  animation: mobileFilterBackdropFade 200ms ease;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 380ms cubic-bezier(0.22, 0.61, 0.36, 1);
 }
-@keyframes mobileFilterBackdropFade {
-  from { opacity: 0; }
-  to   { opacity: 1; }
+.mobileFilterBackdropOpen {
+  opacity: 1;
+  pointer-events: auto;
 }
 .mobileFilterSheet {
   width: 100%;
@@ -1486,7 +1633,13 @@
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
-  animation: mobileFilterSheetSlideUp 220ms ease;
+  transform: translateY(100%);
+  transition: transform 380ms cubic-bezier(0.22, 0.61, 0.36, 1);
+  will-change: transform;
+}
+.mobileFilterSheetOpen {
+  transform: translateY(0);
+  animation: mobileFilterSheetSlideUp 380ms cubic-bezier(0.22, 0.61, 0.36, 1);
 }
 @keyframes mobileFilterSheetSlideUp {
   from { transform: translateY(100%); }
@@ -1540,21 +1693,27 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  white-space: nowrap;
+  min-width: 0;
   overflow: hidden;
-  text-overflow: ellipsis;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
+}
+.toolbarMobileChipLabel {
+  font-weight: 600;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+.toolbarMobileChipValue {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 @media (max-width: 767px) {
   .graphExpandHint {
     opacity: 1;
     padding: 8px;
-  }
-  .graphReset {
-    min-width: 44px;
-    min-height: 44px;
-    padding: 10px;
   }
 }

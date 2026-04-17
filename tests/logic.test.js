@@ -77,43 +77,129 @@ describe('buildDirectedAdjacency', () => {
   })
 })
 
-describe('allShortestPaths', () => {
-  it('returns single shortest path when only one exists', () => {
-    const paths = allShortestPaths(deals, 'D', 'C')
-    expect(paths).toEqual([['D', 'A', 'C']])
+describe('allShortestPaths (allDirectedPaths) — loose mode', () => {
+  // Loose mode is used here because these fixtures lack source/target
+  // categories. Production traces run in strict mode (see strict tests below).
+  const opts = { strictValueChain: false }
+
+  it('enumerates all directed simple paths', () => {
+    const paths = allShortestPaths(deals, 'D', 'C', opts)
+    // D -> A -> C and D -> A -> B -> C, sorted shortest-first.
+    expect(paths.map(p => p.join('>'))).toEqual(['D>A>C', 'D>A>B>C'])
   })
 
-  it('returns one direct path when a length-1 edge exists beside longer paths', () => {
+  it('enumerates every directed simple path, not just the shortest', () => {
     const d2 = [
       ...deals,
       { id: 'e', source: 'A', target: 'E', date: '2021-01', deal_type: 'gpu_purchase' },
       { id: 'f', source: 'E', target: 'C', date: '2022-01', deal_type: 'gpu_purchase' },
     ]
-    const paths = allShortestPaths(d2, 'A', 'C')
-    expect(paths.length).toBe(1)
-    expect(paths[0]).toEqual(['A', 'C'])
+    const paths = allShortestPaths(d2, 'A', 'C', opts)
+    expect(paths.map(p => p.join('>'))).toEqual(['A>C', 'A>B>C', 'A>E>C'])
   })
 
-  it('returns all shortest paths of equal length when multiple exist', () => {
+  it('returns all parallel shortest paths when multiple exist', () => {
     const d3 = [
       { id: 'ax', source: 'A', target: 'X', date: '2020-01', deal_type: 'gpu_purchase' },
       { id: 'xd', source: 'X', target: 'D', date: '2020-02', deal_type: 'gpu_purchase' },
       { id: 'ay', source: 'A', target: 'Y', date: '2020-03', deal_type: 'gpu_purchase' },
       { id: 'yd', source: 'Y', target: 'D', date: '2020-04', deal_type: 'gpu_purchase' },
     ]
-    const paths = allShortestPaths(d3, 'A', 'D')
+    const paths = allShortestPaths(d3, 'A', 'D', opts)
     expect(paths.length).toBe(2)
     const strs = paths.map(p => p.join('>')).sort()
     expect(strs).toEqual(['A>X>D', 'A>Y>D'])
   })
 
   it('returns [] when no directed path exists', () => {
-    const paths = allShortestPaths(deals, 'C', 'A')
-    expect(paths).toEqual([])
+    expect(allShortestPaths(deals, 'C', 'A', opts)).toEqual([])
   })
 
   it('returns [] when origin === destination', () => {
-    expect(allShortestPaths(deals, 'A', 'A')).toEqual([])
+    expect(allShortestPaths(deals, 'A', 'A', opts)).toEqual([])
+  })
+
+  it('respects maxDepth cap', () => {
+    const chain = [
+      { id: '1', source: 'A', target: 'B', date: '2020-01', deal_type: 'gpu_purchase' },
+      { id: '2', source: 'B', target: 'C', date: '2020-01', deal_type: 'gpu_purchase' },
+      { id: '3', source: 'C', target: 'D', date: '2020-01', deal_type: 'gpu_purchase' },
+      { id: '4', source: 'D', target: 'E', date: '2020-01', deal_type: 'gpu_purchase' },
+    ]
+    expect(allShortestPaths(chain, 'A', 'E', { ...opts, maxDepth: 4 })).toEqual([])
+    expect(allShortestPaths(chain, 'A', 'E', { ...opts, maxDepth: 5 })).toEqual([['A', 'B', 'C', 'D', 'E']])
+  })
+
+  it('respects maxPaths cap', () => {
+    const fan = [
+      ...Array.from({ length: 10 }, (_, i) => ({
+        id: `ax${i}`, source: 'A', target: `X${i}`, date: '2020-01', deal_type: 'gpu_purchase',
+      })),
+      ...Array.from({ length: 10 }, (_, i) => ({
+        id: `xz${i}`, source: `X${i}`, target: 'Z', date: '2020-01', deal_type: 'gpu_purchase',
+      })),
+    ]
+    expect(allShortestPaths(fan, 'A', 'Z', opts).length).toBe(10)
+    expect(allShortestPaths(fan, 'A', 'Z', { ...opts, maxPaths: 3 }).length).toBe(3)
+  })
+})
+
+describe('allShortestPaths (allDirectedPaths) — strict value-chain mode', () => {
+  // Strict mode requires both endpoints to be ranked AND the hop to
+  // strictly advance downstream. Mirrors the production trace algorithm.
+  const supplyChain = [
+    { id: '1', source: 'ASML', target: 'TSMC', source_category: 'equipment', target_category: 'foundry', date: '2024-01', deal_type: 'equipment_supply' },
+    { id: '2', source: 'TSMC', target: 'NVIDIA', source_category: 'foundry', target_category: 'chip_designer', date: '2024-01', deal_type: 'foundry_capacity' },
+    { id: '3', source: 'NVIDIA', target: 'Oracle', source_category: 'chip_designer', target_category: 'hyperscaler', date: '2024-01', deal_type: 'gpu_purchase' },
+    { id: '4', source: 'Oracle', target: 'OpenAI', source_category: 'hyperscaler', target_category: 'ai_lab', date: '2024-01', deal_type: 'cloud_capacity' },
+    // Same-tier sibling hop (chip_designer -> chip_designer) — must be culled.
+    { id: '5', source: 'NVIDIA', target: 'AMD', source_category: 'chip_designer', target_category: 'chip_designer', date: '2024-01', deal_type: 'partnership' },
+    // Backflow (hyperscaler -> chip_designer) — must be culled.
+    { id: '6', source: 'Oracle', target: 'NVIDIA', source_category: 'hyperscaler', target_category: 'chip_designer', date: '2024-01', deal_type: 'partnership' },
+    // Investor edge — must be culled (investor isn't ranked).
+    { id: '7', source: 'Sequoia', target: 'OpenAI', source_category: 'investor', target_category: 'ai_lab', date: '2024-01', deal_type: 'funding_round' },
+  ]
+
+  it('finds the canonical ASML -> OpenAI supply chain path', () => {
+    const paths = allShortestPaths(supplyChain, 'ASML', 'OpenAI')
+    expect(paths.map(p => p.join('>'))).toEqual(['ASML>TSMC>NVIDIA>Oracle>OpenAI'])
+  })
+
+  it('rejects same-tier hops', () => {
+    // NVIDIA -> AMD is chip_designer -> chip_designer; AMD has no further
+    // outgoing edges in the fixture, so any AMD-routed path is impossible.
+    const paths = allShortestPaths(supplyChain, 'NVIDIA', 'AMD')
+    expect(paths).toEqual([])
+  })
+
+  it('rejects upstream backflow', () => {
+    // Oracle -> NVIDIA exists in the fixture but as a backflow edge.
+    const paths = allShortestPaths(supplyChain, 'Oracle', 'NVIDIA')
+    expect(paths).toEqual([])
+  })
+
+  it('excludes investor-rooted paths', () => {
+    // Sequoia -> OpenAI is the only Sequoia edge, but investor has no rank.
+    const paths = allShortestPaths(supplyChain, 'Sequoia', 'OpenAI')
+    expect(paths).toEqual([])
+  })
+
+  it('enforces max tier jump of 2 (no equipment->ai_lab shortcut hops)', () => {
+    const shortcuts = [
+      // Direct equipment -> ai_lab (jump 5) — must be culled even though
+      // strictly downstream.
+      { id: 'e2l', source: 'ASML', target: 'OpenAI', source_category: 'equipment', target_category: 'ai_lab', date: '2024-01', deal_type: 'gpu_purchase' },
+      // memory -> ai_lab (jump 4) — must be culled (kills the noisy
+      // "ASML -> SK Hynix -> OpenAI" 2-hop shortcut even when memory is
+      // a real downstream node).
+      { id: 'lam', source: 'Lam Research', target: 'SK Hynix', source_category: 'equipment', target_category: 'memory', date: '2024-01', deal_type: 'equipment_supply' },
+      { id: 'sko', source: 'SK Hynix', target: 'OpenAI', source_category: 'memory', target_category: 'ai_lab', date: '2024-01', deal_type: 'custom_asic' },
+      // chip_designer -> ai_lab (jump 3) — must be culled.
+      { id: 'no', source: 'NVIDIA', target: 'OpenAI', source_category: 'chip_designer', target_category: 'ai_lab', date: '2024-01', deal_type: 'gpu_purchase' },
+    ]
+    expect(allShortestPaths(shortcuts, 'ASML', 'OpenAI')).toEqual([])
+    expect(allShortestPaths(shortcuts, 'Lam Research', 'OpenAI')).toEqual([])
+    expect(allShortestPaths(shortcuts, 'NVIDIA', 'OpenAI')).toEqual([])
   })
 })
 

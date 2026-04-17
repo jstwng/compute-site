@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { Fragment, useMemo, useState } from 'react'
 import styles from './styles.module.css'
 import Dropdown from './Dropdown.jsx'
 import { COMPANIES, CATEGORIES } from './companies.js'
@@ -8,6 +8,30 @@ import MobileFilterSheet from './MobileFilterSheet.jsx'
 
 const earliestYear = parseInt(EARLIEST_DATE.slice(0, 4), 10)
 const latestYear = parseInt(LATEST_DATE.slice(0, 4), 10)
+
+// Renders a path as a flow of company names separated by tight middot
+// connectors. Each company stays on one line (white-space: nowrap on the
+// node), but the connector emits a literal whitespace break opportunity
+// so a 5-hop walk that exceeds the dropdown's 560px width breaks AT a
+// connector boundary rather than overflowing the panel.
+function PathPills({ nodes }) {
+  return (
+    <span className={styles.toolbarPathFlow}>
+      {nodes.map((n, i) => (
+        <Fragment key={i}>
+          {i > 0 && (
+            <>
+              {' '}
+              <span className={styles.toolbarPathConnector} aria-hidden="true">·</span>
+              {' '}
+            </>
+          )}
+          <span className={styles.toolbarPathNode}>{n}</span>
+        </Fragment>
+      ))}
+    </span>
+  )
+}
 
 function yearToFrom(y) { return `${y}-01` }
 function yearToTo(y) { return `${y}-12` }
@@ -22,6 +46,17 @@ export default function Toolbar({
   reachableFromOrigin,
   tracePaths,
   tracePathIndex,
+  // Hop-count buckets [{ len, count }] sorted ascending. Drives the
+  // chip strip that lets the user filter the path picker by hop count.
+  tracePathBuckets,
+  tracePathLength,
+  onSelectTracePathLength,
+  // Groups visible paths by value-chain shape (sequence of category tiers).
+  // Each group: { shape, shapeLabel, paths, indices }. The `indices` array
+  // maps each grouped path back to its position in the flat tracePaths
+  // (i.e. tracePathIndex space) so the picker can stay in sync with the
+  // graph highlight.
+  tracePathGroups,
   traceNoPath,
   traceNoPathBoth,
   onChangeTraceOrigin,
@@ -107,11 +142,95 @@ export default function Toolbar({
     return `${clusterCategories.size} selected`
   })()
 
+  // Hop-count chip strip. Renders one chip per available hop count plus
+  // an "All" chip. Chips are click-to-filter; the active one is rendered
+  // bolder. Hidden when there's at most one bucket (nothing to filter).
+  const renderHopChips = () => {
+    if (!tracePathBuckets || tracePathBuckets.length <= 1) return null
+    const totalCount = tracePathBuckets.reduce((s, b) => s + b.count, 0)
+    return (
+      <div className={styles.toolbarHopChips}>
+        <button
+          type="button"
+          className={tracePathLength == null ? styles.toolbarHopChipActive : styles.toolbarHopChip}
+          onClick={() => onSelectTracePathLength?.(null)}
+        >
+          All <span className={styles.toolbarHopChipCount}>{totalCount}</span>
+        </button>
+        {tracePathBuckets.map(b => (
+          <button
+            key={b.len}
+            type="button"
+            className={tracePathLength === b.len ? styles.toolbarHopChipActive : styles.toolbarHopChip}
+            onClick={() => onSelectTracePathLength?.(b.len)}
+          >
+            {b.len} {b.len === 1 ? 'hop' : 'hops'} <span className={styles.toolbarHopChipCount}>{b.count}</span>
+          </button>
+        ))}
+      </div>
+    )
+  }
+
   const formatEdgeTypes = (source, target) => {
     if (!pathEdgeTypes) return ''
     const types = pathEdgeTypes.get(`${source}__${target}`)
     if (!types || types.length === 0) return ''
     return types.map(t => DEAL_TYPES[t]?.label || t).join(', ')
+  }
+
+  // Renders the path picker for either desktop dropdown or mobile sheet.
+  // Paths are grouped by value-chain shape; each shape lists its specific
+  // company routes as compact middot-separated rows. Click a row to mark
+  // it active (drives graph highlight). No inline hop breakdown — deal
+  // types per hop are visible by clicking the corresponding edge in the
+  // graph itself.
+  const renderPathPicker = () => {
+    if (!tracePathGroups || tracePathGroups.length === 0) return null
+    const totalPaths = tracePathGroups.reduce((s, g) => s + g.paths.length, 0)
+    const showShapeHeaders = tracePathGroups.length > 1
+    return (
+      <div className={styles.toolbarPathList}>
+        {tracePathGroups.map((group, gi) => (
+          <div key={gi} className={styles.toolbarPathGroup}>
+            {showShapeHeaders && (
+              <div className={styles.toolbarPathShapeLabel}>
+                {group.shapeLabel}
+                <span className={styles.toolbarPathShapeCount}>
+                  {group.paths.length}
+                </span>
+              </div>
+            )}
+            {group.paths.map((p, pi) => {
+              const flatIdx = group.indices[pi]
+              const isActive = flatIdx === tracePathIndex
+              const isSelectable = totalPaths > 1
+              const rowClass = [
+                styles.toolbarPathRow,
+                isActive ? styles.toolbarPathRowActive : '',
+                isSelectable ? '' : styles.toolbarPathRowStatic,
+              ].filter(Boolean).join(' ')
+              return (
+                <div key={flatIdx} className={styles.toolbarPathItem}>
+                  {isSelectable ? (
+                    <button
+                      type="button"
+                      className={rowClass}
+                      onClick={() => onSelectTracePath(flatIdx)}
+                    >
+                      <PathPills nodes={p} />
+                    </button>
+                  ) : (
+                    <div className={rowClass}>
+                      <PathPills nodes={p} />
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        ))}
+      </div>
+    )
   }
 
   return (
@@ -124,24 +243,24 @@ export default function Toolbar({
               className={styles.toolbarMobileChip}
               onClick={() => setMobileSheet('trace')}
             >
-              <span style={{ fontWeight: 600 }}>Trace:</span>{' '}
-              <span>{traceDisplay}</span>
+              <span className={styles.toolbarMobileChipLabel}>Trace:</span>
+              <span className={styles.toolbarMobileChipValue}>{traceDisplay}</span>
             </button>
             <button
               type="button"
               className={styles.toolbarMobileChip}
               onClick={() => setMobileSheet('timeline')}
             >
-              <span style={{ fontWeight: 600 }}>Timeline:</span>{' '}
-              <span>{timelineDisplay}</span>
+              <span className={styles.toolbarMobileChipLabel}>Timeline:</span>
+              <span className={styles.toolbarMobileChipValue}>{timelineDisplay}</span>
             </button>
             <button
               type="button"
               className={styles.toolbarMobileChip}
               onClick={() => setMobileSheet('cluster')}
             >
-              <span style={{ fontWeight: 600 }}>Cluster:</span>{' '}
-              <span>{clusterDisplay}</span>
+              <span className={styles.toolbarMobileChipLabel}>Cluster:</span>
+              <span className={styles.toolbarMobileChipValue}>{clusterDisplay}</span>
             </button>
           </>
         ) : (
@@ -169,47 +288,8 @@ export default function Toolbar({
                     panelMaxHeight={260}
                   />
                 </div>
-                {tracePaths && tracePaths.length > 0 && (
-                  <div className={styles.toolbarPathList}>
-                    {tracePaths.map((p, i) => {
-                      const isActive = i === tracePathIndex
-                      const isSelectable = tracePaths.length > 1
-                      const hasMultipleEdges = p.length > 2
-                      const label = `Path ${i + 1}: ${p.join(' to ')}`
-                      return (
-                        <div key={i} className={styles.toolbarPathItem}>
-                          {isSelectable ? (
-                            <button
-                              type="button"
-                              className={isActive ? styles.toolbarPathRowActive : styles.toolbarPathRow}
-                              onClick={() => onSelectTracePath(i)}
-                            >
-                              {label}
-                            </button>
-                          ) : (
-                            <div className={styles.toolbarPathRowActive}>{label}</div>
-                          )}
-                          {isActive && hasMultipleEdges && (
-                            <ul className={styles.toolbarPathEdges}>
-                              {p.slice(0, -1).map((n, idx) => {
-                                const nextNode = p[idx + 1]
-                                const edgeTypes = formatEdgeTypes(n, nextNode)
-                                return (
-                                  <li key={idx}>
-                                    <span className={styles.toolbarPathEdgeHop}>{n} to {nextNode}</span>
-                                    {edgeTypes && (
-                                      <span className={styles.toolbarPathEdgeType}> — {edgeTypes}</span>
-                                    )}
-                                  </li>
-                                )
-                              })}
-                            </ul>
-                          )}
-                        </div>
-                      )
-                    })}
-                  </div>
-                )}
+                {renderHopChips()}
+                {renderPathPicker()}
                 {(traceOrigin || traceDestination) && (
                   <div className={styles.toolbarPanelActions}>
                     {traceNoPath && (
@@ -313,47 +393,8 @@ export default function Toolbar({
               placeholder="—"
               searchable
             />
-            {tracePaths && tracePaths.length > 0 && (
-              <div className={styles.toolbarPathList}>
-                {tracePaths.map((p, i) => {
-                  const isActive = i === tracePathIndex
-                  const isSelectable = tracePaths.length > 1
-                  const hasMultipleEdges = p.length > 2
-                  const label = `Path ${i + 1}: ${p.join(' to ')}`
-                  return (
-                    <div key={i} className={styles.toolbarPathItem}>
-                      {isSelectable ? (
-                        <button
-                          type="button"
-                          className={isActive ? styles.toolbarPathRowActive : styles.toolbarPathRow}
-                          onClick={() => onSelectTracePath(i)}
-                        >
-                          {label}
-                        </button>
-                      ) : (
-                        <div className={styles.toolbarPathRowActive}>{label}</div>
-                      )}
-                      {isActive && hasMultipleEdges && (
-                        <ul className={styles.toolbarPathEdges}>
-                          {p.slice(0, -1).map((n, idx) => {
-                            const nextNode = p[idx + 1]
-                            const edgeTypes = formatEdgeTypes(n, nextNode)
-                            return (
-                              <li key={idx}>
-                                <span className={styles.toolbarPathEdgeHop}>{n} to {nextNode}</span>
-                                {edgeTypes && (
-                                  <span className={styles.toolbarPathEdgeType}> — {edgeTypes}</span>
-                                )}
-                              </li>
-                            )
-                          })}
-                        </ul>
-                      )}
-                    </div>
-                  )
-                })}
-              </div>
-            )}
+            {renderHopChips()}
+            {renderPathPicker()}
             {(traceOrigin || traceDestination) && (
               <div className={styles.toolbarPanelActions}>
                 {traceNoPath && (

@@ -1,19 +1,64 @@
-import { Fragment, useEffect, useMemo, useState } from 'react'
+import { Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import styles from './styles.module.css'
 import { DEALS } from './data'
 import useMediaQuery from './useMediaQuery.js'
 
+// Smooth height transition for desktop description cells. Mirrors the
+// DescAnim component in DealTable so desktop expand/collapse uses the
+// same 380ms cubic-bezier curve as mobile rows.
+function DescAnim({ expanded, children }) {
+  const ref = useRef(null)
+  const [contentH, setContentH] = useState(0)
+
+  useLayoutEffect(() => {
+    if (ref.current) setContentH(ref.current.scrollHeight)
+  }, [children])
+
+  useEffect(() => {
+    const onResize = () => {
+      if (ref.current) setContentH(ref.current.scrollHeight)
+    }
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [])
+
+  return (
+    <div
+      ref={ref}
+      style={{
+        height: expanded && contentH > 0 ? `${contentH}px` : '1.4em',
+        overflow: 'hidden',
+        whiteSpace: 'normal',
+        wordBreak: 'break-word',
+        transition: 'height 380ms cubic-bezier(0.22, 0.61, 0.36, 1)',
+      }}
+    >
+      {children}
+    </div>
+  )
+}
+
 function MobileExpandRow({ isOpen, colSpan, children }) {
   const [mounted, setMounted] = useState(isOpen)
   const [visible, setVisible] = useState(false)
+  // Double rAF on open: a single rAF races React's batched commit so the
+  // closed state never gets a paint frame and the open transition snaps.
+  // Two rAFs guarantee a paint of the closed state in between, making
+  // open mirror the close transition.
   useEffect(() => {
     if (isOpen) {
       setMounted(true)
-      const raf = requestAnimationFrame(() => setVisible(true))
-      return () => cancelAnimationFrame(raf)
+      let raf2 = 0
+      const raf1 = requestAnimationFrame(() => {
+        raf2 = requestAnimationFrame(() => setVisible(true))
+      })
+      return () => {
+        cancelAnimationFrame(raf1)
+        if (raf2) cancelAnimationFrame(raf2)
+      }
     }
     setVisible(false)
-    const t = setTimeout(() => setMounted(false), 340)
+    const t = setTimeout(() => setMounted(false), 400)
     return () => clearTimeout(t)
   }, [isOpen])
   if (!mounted) return null
@@ -237,7 +282,6 @@ export default function SourcesSection() {
             <tbody>
               {visible.map(r => {
                 const expanded = expandedId === r.n
-                const truncClass = expanded ? styles.descTextExpanded : styles.descTextTruncated
                 return (
                   <tr
                     key={r.n}
@@ -246,15 +290,15 @@ export default function SourcesSection() {
                   >
                     <td className={styles.sourcesCategoryCell}>{r.source}</td>
                     <td className={styles.descCell}>
-                      <div className={truncClass}>
+                      <DescAnim expanded={expanded}>
                         {r.url ? (
                           <a className={styles.sourcesLink} href={r.url} target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()}>{r.article}</a>
                         ) : r.article}
-                      </div>
+                      </DescAnim>
                     </td>
                     <td>{r.date}</td>
                     <td>
-                      <div className={truncClass}>{r.deals}</div>
+                      <DescAnim expanded={expanded}>{r.deals}</DescAnim>
                     </td>
                     <td style={{ textAlign: 'center' }} onClick={e => e.stopPropagation()}>
                       {r.url ? (

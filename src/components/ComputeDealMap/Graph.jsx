@@ -483,15 +483,6 @@ export default function Graph({ deals, hoveredEdge, onHoverEdge, hoveredNode, on
         })
       }}
     >
-      {hasFocus && (
-        <button
-          type="button"
-          className={styles.graphReset}
-          onClick={() => { setFocusedNodes(null); onHoverNode(null); setCardPinned(false) }}
-        >
-          Reset view
-        </button>
-      )}
       {isModal && onRequestClose && (
         <button
           type="button"
@@ -517,7 +508,7 @@ export default function Graph({ deals, hoveredEdge, onHoverEdge, hoveredNode, on
           <span>Close</span>
         </button>
       )}
-      {maximizable && !isModal && hoveringCanvas && !hoveredNode && (
+      {maximizable && !isModal && !hasFocus && hoveringCanvas && !hoveredNode && (
         <button
           type="button"
           className={styles.graphExpandHint}
@@ -542,7 +533,7 @@ export default function Graph({ deals, hoveredEdge, onHoverEdge, hoveredNode, on
           <span>Click anywhere to expand</span>
         </button>
       )}
-      {isModal && hasFocus && hoveringCanvas && !hoveredNode && (
+      {hasFocus && hoveringCanvas && !hoveredNode && (
         <button
           type="button"
           className={styles.graphExpandHint}
@@ -564,11 +555,12 @@ export default function Graph({ deals, hoveredEdge, onHoverEdge, hoveredNode, on
         }}
         onClick={e => {
           if (e.target !== e.currentTarget) return
-          if (maximizable && !isModal && onRequestMaximize) onRequestMaximize()
-          else if (isModal && hasFocus) {
+          if (hasFocus) {
             setFocusedNodes(null)
             onHoverNode(null)
             setCardPinned(false)
+          } else if (maximizable && !isModal && onRequestMaximize) {
+            onRequestMaximize()
           }
         }}
       >

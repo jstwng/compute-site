@@ -3,6 +3,7 @@ import { DESCRIPTIONS } from './company-descriptions.js'
 
 export const CATEGORIES = {
   chip_designer: { label: 'Chip designers' },
+  foundry:       { label: 'Foundry' },
   hyperscaler:   { label: 'Hyperscalers' },
   neocloud:      { label: 'Neoclouds' },
   ai_lab:        { label: 'AI labs' },

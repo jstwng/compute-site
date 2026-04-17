@@ -29,6 +29,15 @@ export default function Dropdown({
   isOpen: controlledOpen,
   onOpenChange,
   nativeOnMobile = false,
+  // When true (default), the panel renders in-flow on mobile so it pushes
+  // MobileFilterSheet content as it grows. Set false when the Dropdown lives
+  // in page flow (e.g. FilterBar) so opening a panel overlays content below
+  // instead of displacing the DealTable.
+  inlineOnMobile = true,
+  // When true, the trigger wrapper + button stretch to fill the parent's
+  // width. Used by FilterBar so Deal type / Category each occupy a 50%
+  // column on mobile and the value text gets ellipsis when squeezed.
+  fill = false,
 }) {
   const [uncontrolledOpen, setUncontrolledOpen] = useState(false)
   const [query, setQuery] = useState('')
@@ -55,19 +64,32 @@ export default function Dropdown({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen])
 
-  // Two-state mount. Panel uses the same max-height + opacity transition
-  // as the mobile table row expand/collapse (see .mobileTableExpandInner
-  // in styles.module.css): 240ms on max-height, 200ms on opacity.
+  // Two-state mount. Panel uses the same cubic-bezier curve and 380ms
+  // duration as the ProfilePanel slide so a dropdown opening inside the
+  // mobile bottom sheet feels coordinated with the sheet's own growth.
+  //
+  // Open uses double rAF so the closed state (grid-template-rows: 0fr,
+  // opacity: 0) is actually painted by the browser before we flip to the
+  // open state. A single rAF races React's batched commit and the
+  // transition never gets an initial frame, so the panel snaps open with
+  // no animation while close looks fine. Two rAFs guarantee a paint of
+  // the closed state in between, which makes open + close symmetrical.
   const [panelMounted, setPanelMounted] = useState(false)
   const [panelVisible, setPanelVisible] = useState(false)
   useEffect(() => {
     if (isOpen) {
       setPanelMounted(true)
-      const raf = requestAnimationFrame(() => setPanelVisible(true))
-      return () => cancelAnimationFrame(raf)
+      let raf2 = 0
+      const raf1 = requestAnimationFrame(() => {
+        raf2 = requestAnimationFrame(() => setPanelVisible(true))
+      })
+      return () => {
+        cancelAnimationFrame(raf1)
+        if (raf2) cancelAnimationFrame(raf2)
+      }
     }
     setPanelVisible(false)
-    const t = setTimeout(() => setPanelMounted(false), 340)
+    const t = setTimeout(() => setPanelMounted(false), 400)
     return () => clearTimeout(t)
   }, [isOpen])
 
@@ -116,7 +138,7 @@ export default function Dropdown({
   }
 
   return (
-    <div ref={wrapRef} style={{ position: 'relative' }}>
+    <div ref={wrapRef} style={{ position: 'relative', width: fill ? '100%' : undefined }}>
       <button
         type="button"
         onClick={() => setIsOpen(o => !o)}
@@ -134,10 +156,24 @@ export default function Dropdown({
           fontFamily: 'inherit',
           cursor: 'pointer',
           whiteSpace: 'nowrap',
+          width: fill ? '100%' : undefined,
+          minWidth: 0,
+          justifyContent: fill ? 'flex-start' : undefined,
+          overflow: 'hidden',
         }}
       >
-        <span style={{ fontWeight: 700 }}>{label}:</span>
-        <span style={{ fontWeight: 400 }}>{display}</span>
+        <span style={{ fontWeight: 700, flexShrink: 0 }}>{label}:</span>
+        <span
+          style={{
+            fontWeight: 400,
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+            minWidth: 0,
+          }}
+        >
+          {display}
+        </span>
       </button>
       {panelMounted && (
         <div
@@ -146,25 +182,39 @@ export default function Dropdown({
             // pushes page/sheet content and scrolls naturally with the
             // parent container. Absolute positioning here would clip
             // inside the bottom-sheet or cut off below the viewport.
-            position: isMobile ? 'relative' : 'absolute',
-            top: isMobile ? 'auto' : '100%',
-            left: isMobile ? 'auto' : 0,
-            marginTop: isMobile ? '4px' : 0,
+            // FilterBar opts out via inlineOnMobile=false so its panels
+            // overlay the DealTable instead of pushing it down.
+            position: isMobile && inlineOnMobile ? 'relative' : 'absolute',
+            top: isMobile && inlineOnMobile ? 'auto' : '100%',
+            left: isMobile && inlineOnMobile ? 'auto' : 0,
+            marginTop: isMobile && inlineOnMobile ? '4px' : 0,
             border: '1px solid var(--border)',
             background: 'var(--bg)',
             zIndex: 1000,
-            minWidth: isMobile ? '100%' : (panelMinWidth ?? (children ? 'max-content' : '100%')),
-            width: isMobile ? '100%' : (children ? 'max-content' : undefined),
-            maxWidth: isMobile ? 'none' : (children ? 'none' : '320px'),
+            // Children-mode panels (Trace, Timeline, Cluster): let content
+            // size the panel naturally — Timeline (two year selectors)
+            // hugs ~180px while Trace can stretch up to the 420px cap for
+            // long path lists. Drop the explicit min-width so each panel
+            // matches its actual content footprint instead of padding to
+            // a uniform width.
+            minWidth: isMobile && inlineOnMobile
+              ? '100%'
+              : (panelMinWidth ?? (children ? undefined : '100%')),
+            width: isMobile && inlineOnMobile ? '100%' : undefined,
+            maxWidth: isMobile && inlineOnMobile
+              ? 'none'
+              : (children ? 'min(420px, calc(100vw - 32px))' : '320px'),
             boxSizing: 'border-box',
             // grid-template-rows: 0fr -> 1fr animates the INTRINSIC content
             // height symmetrically (no dead time on close), unlike max-height
             // with a fixed cap. Inner wrapper has overflow: hidden + min-height: 0
-            // so content clips cleanly during the transition.
+            // so content clips cleanly during the transition. Curve + duration
+            // mirror the ProfilePanel slide so dropdowns inside the mobile
+            // bottom sheet feel coordinated with the sheet's own resize.
             display: 'grid',
             gridTemplateRows: panelVisible ? '1fr' : '0fr',
             opacity: panelVisible ? 1 : 0,
-            transition: 'grid-template-rows 320ms cubic-bezier(0.22, 0.61, 0.36, 1), opacity 260ms cubic-bezier(0.22, 0.61, 0.36, 1)',
+            transition: 'grid-template-rows 380ms cubic-bezier(0.22, 0.61, 0.36, 1), opacity 280ms cubic-bezier(0.22, 0.61, 0.36, 1)',
             pointerEvents: panelVisible ? 'auto' : 'none',
           }}
         >
