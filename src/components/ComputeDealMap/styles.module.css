@@ -150,22 +150,12 @@
   gap: 8px;
 }
 
-.profileClearFilter {
-  font: inherit;
-  font-size: 12px;
-  font-weight: 400;
-  color: var(--text-muted);
-  background: transparent;
-  border: none;
-  padding: 0;
-  cursor: pointer;
-  text-decoration: underline;
-  text-decoration-color: var(--link-underline);
-  text-underline-offset: 2px;
+/* Counterparty filter — single dropdown replacing the old ranked list. */
+.profileCounterpartyFilter {
+  margin-bottom: 4px;
 }
-.profileClearFilter:hover { color: var(--text); }
 
-.profileList, .profileDealList {
+.profileDealList {
   list-style: none;
   margin: 0;
   padding: 0;
@@ -173,21 +163,6 @@
   flex-direction: column;
   gap: 4px;
 }
-
-.profileRow, .profileRowActive {
-  display: flex;
-  justify-content: space-between;
-  padding: 4px 0;
-  cursor: pointer;
-  transition: background 100ms ease;
-}
-.profileRow:hover { background: var(--row-hover); }
-.profileRowActive {
-  background: var(--row-highlight);
-  font-weight: 500;
-}
-.profileRowName { font-weight: 600; }
-.profileRowCount { color: var(--text-muted); }
 
 .profileDealRow {
   padding: 6px 0;
