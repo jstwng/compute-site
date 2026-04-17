@@ -115,6 +115,7 @@ export default function DealTable({ deals, hoveredEdge, scrollToDealId, onHoverE
               flashing ? styles.flashRow : '',
               highlighted ? styles.highlighted : '',
               styles.clickableRow,
+              styles.rowEnter,
             ].filter(Boolean).join(' ')
 
             if (isMobile) {

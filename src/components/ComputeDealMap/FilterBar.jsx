@@ -19,6 +19,23 @@ const CATEGORY_OPTIONS = [
 
 function DropdownFilter({ label, options, value, onChange, isOpen, onToggle }) {
   const activeLabel = options.find(o => o.value === value)?.label || ''
+
+  // Two-state mount — same pattern as ProfilePanel and the graph modal.
+  // Panel stays in the DOM through the exit transition; rAF between mount
+  // and visible makes the browser see a real opacity 0 -> 1 transition.
+  const [panelMounted, setPanelMounted] = useState(false)
+  const [panelVisible, setPanelVisible] = useState(false)
+  useEffect(() => {
+    if (isOpen) {
+      setPanelMounted(true)
+      const raf = requestAnimationFrame(() => setPanelVisible(true))
+      return () => cancelAnimationFrame(raf)
+    }
+    setPanelVisible(false)
+    const t = setTimeout(() => setPanelMounted(false), 180)
+    return () => clearTimeout(t)
+  }, [isOpen])
+
   return (
     <div className="filterBarField" style={{ position: 'relative' }}>
       <button
@@ -44,7 +61,7 @@ function DropdownFilter({ label, options, value, onChange, isOpen, onToggle }) {
         <span style={{ fontWeight: 700 }}>{label}:</span>
         <span style={{ fontWeight: 400 }}>{activeLabel}</span>
       </button>
-      {isOpen && (
+      {panelMounted && (
         <div style={{
           position: 'absolute',
           top: '100%',
@@ -56,6 +73,11 @@ function DropdownFilter({ label, options, value, onChange, isOpen, onToggle }) {
           zIndex: 1000,
           minWidth: '100%',
           boxSizing: 'border-box',
+          opacity: panelVisible ? 1 : 0,
+          transform: `translateY(${panelVisible ? 0 : -4}px)`,
+          transformOrigin: 'top',
+          transition: 'opacity 160ms ease, transform 180ms cubic-bezier(0.4, 0, 0.2, 1)',
+          pointerEvents: panelVisible ? 'auto' : 'none',
         }}>
           {options.map(opt => (
             <button

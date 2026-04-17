@@ -210,7 +210,7 @@ export default function SourcesSection() {
                 return (
                   <tr
                     key={r.n}
-                    className={styles.clickableRow}
+                    className={`${styles.clickableRow} ${styles.rowEnter}`}
                     onClick={() => toggleExpanded(r.n)}
                   >
                     <td className={styles.sourcesCategoryCell}>{r.source}</td>

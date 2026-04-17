@@ -448,6 +448,17 @@ export default function App() {
                   onClearCluster={handleClearCluster}
                   pathEdgeTypes={pathEdgeTypes}
                 />
+                <button
+                  type="button"
+                  className={styles.graphModalClose}
+                  onClick={() => setGraphMaximized(false)}
+                  aria-label="Close expanded graph"
+                >
+                  <svg width="9" height="9" viewBox="0 0 12 12" aria-hidden="true">
+                    <path d="M1 1 L11 11 M11 1 L1 11" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="square" />
+                  </svg>
+                  <span>Close</span>
+                </button>
               </div>
               <div className={styles.graphModalGraphSlot}>
                 <Graph
@@ -459,7 +470,6 @@ export default function App() {
                   onScrollToRow={id => setScrollToDealId(id)}
                   isModal
                   maximizable={false}
-                  onRequestClose={() => setGraphMaximized(false)}
                 />
               </div>
             </div>
