@@ -16,6 +16,7 @@ import Graph from './components/ComputeDealMap/Graph.jsx'
 import DealTable from './components/ComputeDealMap/DealTable.jsx'
 import SourcesSection from './components/ComputeDealMap/SourcesSection.jsx'
 import ProfilePanel from './components/ComputeDealMap/ProfilePanel.jsx'
+import useMediaQuery from './components/ComputeDealMap/useMediaQuery.js'
 
 const BUILD_DATE_LABEL = (() => {
   const iso = typeof __BUILD_DATE__ === 'string' ? __BUILD_DATE__ : new Date().toISOString()
@@ -27,6 +28,7 @@ const BUILD_DATE_LABEL = (() => {
 const DEFAULT_TIMELINE = { from: EARLIEST_DATE, to: LATEST_DATE }
 
 export default function App() {
+  const isMobile = useMediaQuery('(max-width: 767px)')
   const [taglineExpanded, setTaglineExpanded] = useState(false)
   const [filters, setFilters] = useState({ dealType: 'all', category: 'all', search: '' })
   const [hoveredEdge, setHoveredEdge] = useState(null)
@@ -389,7 +391,7 @@ export default function App() {
             hoveredNode={hoveredNode}
             onHoverNode={setHoveredNode}
             onScrollToRow={id => setScrollToDealId(id)}
-            onRequestMaximize={() => setGraphMaximized(true)}
+            onRequestMaximize={isMobile ? undefined : () => setGraphMaximized(true)}
             onClickNode={openCompany}
             onClickEdge={openDeal}
             focusedNodes={focusedNodes}
@@ -476,7 +478,9 @@ export default function App() {
           </div>
         )}
 
-        <h3 className={styles.sectionSubheader}>Transactions</h3>
+        <h3 className={styles.sectionSubheader}>
+          Transactions <span className={styles.sectionSubheaderHint}>tap a row to expand</span>
+        </h3>
         <FilterBar filters={tableFilters} onChange={setTableFilters} />
         <DealTable
           deals={tableDeals}

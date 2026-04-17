@@ -95,28 +95,12 @@ export default function ProfilePanel({
   )
 }
 
-// Mobile expand wrapper for deal rows inside the panel — same mount/visible
-// pattern used in the mobile transactions table so open AND close animate.
 function PanelDealExpand({ isOpen, children }) {
-  const [mounted, setMounted] = useState(isOpen)
-  const [visible, setVisible] = useState(false)
-  useEffect(() => {
-    if (isOpen) {
-      setMounted(true)
-      const raf = requestAnimationFrame(() => setVisible(true))
-      return () => cancelAnimationFrame(raf)
-    }
-    setVisible(false)
-    const t = setTimeout(() => setMounted(false), 240)
-    return () => clearTimeout(t)
-  }, [isOpen])
-  if (!mounted) return null
+  if (!isOpen) return null
   return (
     <tr className={styles.mobileTableExpandRow}>
       <td colSpan={3} className={styles.mobileTableExpandCell}>
-        <div className={`${styles.mobileTableExpandInner} ${visible ? styles.mobileTableExpandInnerOpen : ''}`}>
-          {children}
-        </div>
+        {children}
       </td>
     </tr>
   )
@@ -189,7 +173,6 @@ function CompanyMode({ content, onScrollToRow, timelineRange, isMobile }) {
               onChange={v => onSetCounterpartyFilter(v === '__all__' ? null : v)}
               searchable
               panelMaxHeight={260}
-              nativeOnMobile
             />
           </div>
         )

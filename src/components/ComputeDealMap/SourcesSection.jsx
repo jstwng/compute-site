@@ -4,25 +4,11 @@ import { DEALS } from './data'
 import useMediaQuery from './useMediaQuery.js'
 
 function MobileExpandRow({ isOpen, colSpan, children }) {
-  const [mounted, setMounted] = useState(isOpen)
-  const [visible, setVisible] = useState(false)
-  useEffect(() => {
-    if (isOpen) {
-      setMounted(true)
-      const raf = requestAnimationFrame(() => setVisible(true))
-      return () => cancelAnimationFrame(raf)
-    }
-    setVisible(false)
-    const t = setTimeout(() => setMounted(false), 240)
-    return () => clearTimeout(t)
-  }, [isOpen])
-  if (!mounted) return null
+  if (!isOpen) return null
   return (
     <tr className={styles.mobileTableExpandRow}>
       <td colSpan={colSpan} className={styles.mobileTableExpandCell}>
-        <div className={`${styles.mobileTableExpandInner} ${visible ? styles.mobileTableExpandInnerOpen : ''}`}>
-          {children}
-        </div>
+        {children}
       </td>
     </tr>
   )
@@ -194,7 +180,9 @@ export default function SourcesSection() {
 
   return (
     <div className={styles.sourcesSection}>
-      <h3 className={styles.sourcesHeading}>Data Sources</h3>
+      <h3 className={styles.sourcesHeading}>
+        Data Sources <span className={styles.sectionSubheaderHint}>tap a row to expand</span>
+      </h3>
       <div className={styles.tableWrap}>
         {!isMobile && (
           <table className={styles.table}>
@@ -259,7 +247,6 @@ export default function SourcesSection() {
         )}
         {isMobile && (
           <>
-            <div className={styles.mobileTableHint}>tap a row to expand</div>
             <table className={styles.mobileTable}>
               <thead>
                 <tr>

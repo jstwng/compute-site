@@ -4,28 +4,14 @@ import { DEAL_TYPES } from './data.js'
 import { sortDeals } from './logic.js'
 import useMediaQuery from './useMediaQuery.js'
 
-// Mounts while isOpen is true, then stays mounted for the exit animation
-// so close is animated just like open. Mirror of the ProfilePanel pattern.
+// Instant mount/unmount — matches desktop's behavior where the expand
+// cell simply reflows into place without a transition.
 function MobileExpandRow({ isOpen, colSpan, children }) {
-  const [mounted, setMounted] = useState(isOpen)
-  const [visible, setVisible] = useState(false)
-  useEffect(() => {
-    if (isOpen) {
-      setMounted(true)
-      const raf = requestAnimationFrame(() => setVisible(true))
-      return () => cancelAnimationFrame(raf)
-    }
-    setVisible(false)
-    const t = setTimeout(() => setMounted(false), 240)
-    return () => clearTimeout(t)
-  }, [isOpen])
-  if (!mounted) return null
+  if (!isOpen) return null
   return (
     <tr className={styles.mobileTableExpandRow}>
       <td colSpan={colSpan} className={styles.mobileTableExpandCell}>
-        <div className={`${styles.mobileTableExpandInner} ${visible ? styles.mobileTableExpandInnerOpen : ''}`}>
-          {children}
-        </div>
+        {children}
       </td>
     </tr>
   )
@@ -96,9 +82,6 @@ export default function DealTable({ deals, hoveredEdge, scrollToDealId, onHoverE
   return (
     <div className={styles.tableWrap}>
       {banner && <div className={styles.tableBanner}>{banner}</div>}
-      {isMobile && (
-        <div className={styles.mobileTableHint}>tap a row to expand</div>
-      )}
       <table className={isMobile ? styles.mobileTable : styles.table}>
         <thead>
           <tr>

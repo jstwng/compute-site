@@ -85,16 +85,16 @@ export default function Dropdown({
   if (useNative) {
     return (
       <label className="">
-        <span className="" style={{ fontWeight: 700, fontSize: '12px', marginRight: '8px' }}>
+        <span className="" style={{ fontWeight: 700, fontSize: '14px', marginRight: '8px' }}>
           {label}:
         </span>
         <select
           value={value ?? ''}
           onChange={(e) => onChange(e.target.value)}
           style={{
-            height: '27px',
+            height: '30px',
             minWidth: '120px',
-            fontSize: '12px',
+            fontSize: '14px',
             color: 'var(--text)',
             background: 'var(--bg)',
             border: '1px solid var(--border)',

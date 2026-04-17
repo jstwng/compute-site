@@ -572,8 +572,8 @@
   .toolbarSearch {
     flex: 1 1 100%;
     min-width: 0;
-    height: 30px;
-    font-size: 13px;
+    height: 32px;
+    font-size: 14px;
     order: 1;
   }
   /* Fill the row width but size each chip proportionally to its content:
@@ -586,12 +586,12 @@
     gap: 6px;
     order: 2;
   }
-  .toolbarChips > * { flex: 1 1 auto; min-width: 0; }
+  .toolbarChips > * { flex: 1 1 auto; }
   .toolbarChips button {
     width: 100%;
-    height: 30px;
+    height: 32px;
     justify-content: flex-start;
-    font-size: 13px;
+    font-size: 14px;
   }
 }
 
@@ -1219,6 +1219,23 @@
   margin: 0;
 }
 
+/* Inline hint that sits next to "Transactions" / "Data Sources" on mobile.
+   Hidden on desktop; shown only when the mobile table takes over so the
+   tap-to-expand affordance stays discoverable. The wrapping space in the
+   h3 renders at the heading's 14px so the gap reads the way Justin
+   wants — larger than the hint's own font. */
+.sectionSubheaderHint {
+  display: none;
+}
+@media (max-width: 767px) {
+  .sectionSubheaderHint {
+    display: inline;
+    font-size: 12px;
+    font-weight: 400;
+    color: var(--text-muted);
+  }
+}
+
 .sourcesHeading {
   font-size: 14px;
   font-weight: 700;
@@ -1307,22 +1324,10 @@
 
 .mobileTableExpandRow td { background: var(--row-hover); border-bottom: 1px solid var(--border-soft); }
 .mobileTableExpandCell {
-  padding: 0 !important;
+  padding: 8px 4px 12px !important;
   white-space: normal !important;
-  overflow: hidden !important;
+  overflow: visible !important;
   max-width: none !important;
-}
-.mobileTableExpandInner {
-  max-height: 0;
-  opacity: 0;
-  padding: 0 4px;
-  overflow: hidden;
-  transition: max-height 240ms ease, opacity 200ms ease, padding 240ms ease;
-}
-.mobileTableExpandInnerOpen {
-  max-height: 500px;
-  opacity: 1;
-  padding: 8px 4px 12px;
 }
 .mobileTableExpandMeta {
   display: flex;
@@ -1450,13 +1455,13 @@
 }
 
 .toolbarMobileChip {
-  height: 30px;
+  height: 32px;
   padding: 0 8px;
   border: 1px solid var(--border);
   background: transparent;
   color: var(--text);
   font: inherit;
-  font-size: 13px;
+  font-size: 14px;
   display: flex;
   align-items: center;
   gap: 6px;

@@ -303,7 +303,7 @@ export default function Toolbar({
               value={traceOrigin}
               onChange={onChangeTraceOrigin}
               placeholder="—"
-              nativeOnMobile
+              searchable
             />
             <Dropdown
               label="To"
@@ -311,7 +311,7 @@ export default function Toolbar({
               value={traceDestination}
               onChange={onChangeTraceDestination}
               placeholder="—"
-              nativeOnMobile
+              searchable
             />
             {tracePaths && tracePaths.length > 0 && (
               <div className={styles.toolbarPathList}>
@@ -377,7 +377,7 @@ export default function Toolbar({
                 const next = parseInt(v, 10)
                 onChangeTimeline({ from: yearToFrom(next), to: yearToTo(toYear) })
               }}
-              nativeOnMobile
+              searchable
             />
             <Dropdown
               label="To"
@@ -387,7 +387,7 @@ export default function Toolbar({
                 const next = parseInt(v, 10)
                 onChangeTimeline({ from: yearToFrom(fromYear), to: yearToTo(next) })
               }}
-              nativeOnMobile
+              searchable
             />
             {!isTimelineDefault && (
               <button
