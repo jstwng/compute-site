@@ -153,79 +153,88 @@ export default function Dropdown({
             width: children ? 'max-content' : undefined,
             maxWidth: children ? 'none' : '320px',
             boxSizing: 'border-box',
-            display: 'flex',
-            flexDirection: 'column',
+            // grid-template-rows: 0fr -> 1fr animates the INTRINSIC content
+            // height symmetrically (no dead time on close), unlike max-height
+            // with a fixed cap. Inner wrapper has overflow: hidden + min-height: 0
+            // so content clips cleanly during the transition.
+            display: 'grid',
+            gridTemplateRows: panelVisible ? '1fr' : '0fr',
             opacity: panelVisible ? 1 : 0,
-            maxHeight: panelVisible ? 600 : 0,
-            overflow: 'hidden',
-            transition: 'max-height 240ms ease, opacity 200ms ease',
+            transition: 'grid-template-rows 240ms ease, opacity 200ms ease',
             pointerEvents: panelVisible ? 'auto' : 'none',
           }}
         >
-          {children ? children : (
-            <>
-              {searchable && (
-                <input
-                  autoFocus
-                  type="text"
-                  placeholder="Search..."
-                  value={query}
-                  onChange={e => setQuery(e.target.value)}
-                  style={{
-                    font: 'inherit',
-                    fontSize: '12px',
-                    height: '28px',
-                    padding: '0 8px',
-                    border: 'none',
-                    borderBottom: '1px solid var(--border)',
-                    background: 'var(--bg)',
-                    color: 'var(--text)',
-                    outline: 'none',
-                  }}
-                />
-              )}
-              <div style={{ maxHeight: panelMaxHeight, overflowY: 'auto', padding: '4px 0' }}>
-                {filtered.length === 0 ? (
-                  <div style={{
-                    padding: '8px 10px',
-                    fontSize: '12px',
-                    color: 'var(--text-muted)',
-                  }}>
-                    No matches
-                  </div>
-                ) : filtered.map(opt => (
-                  <button
-                    key={opt.value}
-                    type="button"
-                    onClick={() => {
-                      onChange(opt.value)
-                      setIsOpen(false)
-                      setQuery('')
-                    }}
+          <div style={{
+            minHeight: 0,
+            overflow: 'hidden',
+            display: 'flex',
+            flexDirection: 'column',
+          }}>
+            {children ? children : (
+              <>
+                {searchable && (
+                  <input
+                    autoFocus
+                    type="text"
+                    placeholder="Search..."
+                    value={query}
+                    onChange={e => setQuery(e.target.value)}
                     style={{
-                      display: 'block',
-                      width: '100%',
-                      padding: '4px 10px',
+                      font: 'inherit',
                       fontSize: '12px',
-                      fontFamily: 'inherit',
-                      fontWeight: opt.value === value ? 700 : 400,
-                      color: 'var(--text)',
-                      background: 'transparent',
+                      height: '28px',
+                      padding: '0 8px',
                       border: 'none',
-                      borderRadius: 0,
-                      cursor: 'pointer',
-                      textAlign: 'left',
-                      whiteSpace: 'nowrap',
+                      borderBottom: '1px solid var(--border)',
+                      background: 'var(--bg)',
+                      color: 'var(--text)',
+                      outline: 'none',
                     }}
-                    onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.06)' }}
-                    onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}
-                  >
-                    {opt.label}
-                  </button>
-                ))}
-              </div>
-            </>
-          )}
+                  />
+                )}
+                <div style={{ maxHeight: panelMaxHeight, overflowY: 'auto', padding: '4px 0' }}>
+                  {filtered.length === 0 ? (
+                    <div style={{
+                      padding: '8px 10px',
+                      fontSize: '12px',
+                      color: 'var(--text-muted)',
+                    }}>
+                      No matches
+                    </div>
+                  ) : filtered.map(opt => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => {
+                        onChange(opt.value)
+                        setIsOpen(false)
+                        setQuery('')
+                      }}
+                      style={{
+                        display: 'block',
+                        width: '100%',
+                        padding: '4px 10px',
+                        fontSize: '12px',
+                        fontFamily: 'inherit',
+                        fontWeight: opt.value === value ? 700 : 400,
+                        color: 'var(--text)',
+                        background: 'transparent',
+                        border: 'none',
+                        borderRadius: 0,
+                        cursor: 'pointer',
+                        textAlign: 'left',
+                        whiteSpace: 'nowrap',
+                      }}
+                      onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.06)' }}
+                      onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
         </div>
       )}
     </div>

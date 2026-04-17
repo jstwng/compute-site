@@ -67,44 +67,51 @@ function DropdownFilter({ label, options, value, onChange, isOpen, onToggle }) {
           top: '100%',
           left: 0,
           marginTop: 0,
-          padding: '4px 0',
           border: '1px solid var(--border)',
           background: 'var(--bg, #000)',
           zIndex: 1000,
           minWidth: '100%',
           boxSizing: 'border-box',
+          // grid-template-rows 0fr <-> 1fr animates the actual content
+          // height symmetrically (no close-time dead zone).
+          display: 'grid',
+          gridTemplateRows: panelVisible ? '1fr' : '0fr',
           opacity: panelVisible ? 1 : 0,
-          maxHeight: panelVisible ? 600 : 0,
-          overflow: 'hidden',
-          transition: 'max-height 240ms ease, opacity 200ms ease',
+          transition: 'grid-template-rows 240ms ease, opacity 200ms ease',
           pointerEvents: panelVisible ? 'auto' : 'none',
         }}>
-          {options.map(opt => (
-            <button
-              key={opt.value}
-              type="button"
-              onClick={() => onChange(opt.value)}
-              style={{
-                display: 'block',
-                width: '100%',
-                padding: '4px 10px',
-                fontSize: '12px',
-                fontFamily: 'inherit',
-                fontWeight: opt.value === value ? 700 : 400,
-                color: 'var(--text)',
-                background: 'transparent',
-                border: 'none',
-                borderRadius: 0,
-                cursor: 'pointer',
-                textAlign: 'left',
-                whiteSpace: 'nowrap',
-              }}
-              onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.06)' }}
-              onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}
-            >
-              {opt.label}
-            </button>
-          ))}
+          <div style={{
+            minHeight: 0,
+            overflow: 'hidden',
+            padding: '4px 0',
+          }}>
+            {options.map(opt => (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => onChange(opt.value)}
+                style={{
+                  display: 'block',
+                  width: '100%',
+                  padding: '4px 10px',
+                  fontSize: '12px',
+                  fontFamily: 'inherit',
+                  fontWeight: opt.value === value ? 700 : 400,
+                  color: 'var(--text)',
+                  background: 'transparent',
+                  border: 'none',
+                  borderRadius: 0,
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                  whiteSpace: 'nowrap',
+                }}
+                onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.06)' }}
+                onMouseLeave={e => { e.currentTarget.style.background = 'transparent' }}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
         </div>
       )}
     </div>
