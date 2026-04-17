@@ -12,41 +12,41 @@ export const DEAL_TYPES = {
   equipment_supply:  { label: 'Equipment Supply',    color: '#2A2A2A', dash: null },
 }
 
+// Timeline floor. Anything dated before this is filtered out of the dataset
+// and the Timeline From/To dropdowns start here regardless of the true
+// earliest deal in the upstream data repo.
+const TIMELINE_FLOOR = '2020-01'
+
 const companyBySlug = new Map(COMPANIES.map(c => [c.slug, c]))
 
-export const DEALS = rawDeals.map(d => {
-  const src = companyBySlug.get(d.source_slug)
-  const tgt = companyBySlug.get(d.target_slug)
-  return {
-    id: d.id,
-    source: d.source_name,
-    source_ticker: src?.ticker ?? null,
-    source_category: d.source_category,
-    target: d.target_name,
-    target_ticker: tgt?.ticker ?? null,
-    target_category: d.target_category,
-    deal_type: d.deal_type,
-    value_billions: d.value_billions ?? null,
-    value_display: d.value_display ?? null,
-    date: d.date,
-    date_display: d.date_display,
-    description: d.description,
-    source_url: d.source_url,
-  }
-})
+export const DEALS = rawDeals
+  .filter(d => !d.date || d.date >= TIMELINE_FLOOR)
+  .map(d => {
+    const src = companyBySlug.get(d.source_slug)
+    const tgt = companyBySlug.get(d.target_slug)
+    return {
+      id: d.id,
+      source: d.source_name,
+      source_ticker: src?.ticker ?? null,
+      source_category: d.source_category,
+      target: d.target_name,
+      target_ticker: tgt?.ticker ?? null,
+      target_category: d.target_category,
+      deal_type: d.deal_type,
+      value_billions: d.value_billions ?? null,
+      value_display: d.value_display ?? null,
+      date: d.date,
+      date_display: d.date_display,
+      description: d.description,
+      source_url: d.source_url,
+    }
+  })
 
 function parseDateKey(d) {
   return d.date || ''
 }
 
-export const EARLIEST_DATE = DEALS.reduce(
-  (min, d) => {
-    const k = parseDateKey(d)
-    if (!k) return min
-    return (!min || k < min) ? k : min
-  },
-  ''
-)
+export const EARLIEST_DATE = TIMELINE_FLOOR
 
 export const LATEST_DATE = DEALS.reduce(
   (max, d) => {
