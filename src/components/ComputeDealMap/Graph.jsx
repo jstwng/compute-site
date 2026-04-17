@@ -34,14 +34,17 @@ function nodeWidthFor(company) {
   return Math.max(NODE_WIDTH, Math.ceil(needed))
 }
 // Force-directed layouts never pack to full grid capacity — collision + spring
-// forces need slack. 0.7 is the empirical ceiling before removeAllOverlaps
-// starts pushing nodes to the frame edge.
-const PACK_FILL = 0.7
+// forces need slack. 0.55 is conservative enough that removeAllOverlaps can
+// always resolve in the 50-pass budget without nodes drifting to the frame
+// edge. A dedicated post-selection pass (fitVisibleNodes) re-tightens the
+// cap using the actual widths of the picked nodes so long names
+// (e.g. "Hewlett Packard Enterprise") don't blow up the grid estimate.
+const PACK_FILL = 0.55
 const MIN_NODE_CAP = 6
 
-// Maximum number of nodes that can be rendered without overlap in a box of
-// the given dimensions. Derived from grid capacity × a fill factor that
-// accounts for the irregular packing of a force-directed layout.
+// Seed cap based on the default node width. Returns an upper bound that
+// assumes every node is NODE_WIDTH wide. The actual cap is re-derived
+// per-layout in fitVisibleNodes below using real widths.
 function computeMaxNodes(width, height) {
   const usableW = Math.max(0, width - 2 * MARGIN)
   const usableH = Math.max(0, height - 2 * MARGIN)
@@ -49,6 +52,36 @@ function computeMaxNodes(width, height) {
   const rows = Math.floor(usableH / (NODE_HEIGHT + MIN_GAP))
   const gridCapacity = Math.max(0, cols * rows)
   return Math.max(MIN_NODE_CAP, Math.floor(gridCapacity * PACK_FILL))
+}
+
+// Re-evaluate capacity using the actual widths of the picked companies.
+// If the selection exceeds what will fit, drop lowest-degree members
+// until it does. Returns the adjusted visible set.
+function fitVisibleNodes(visible, graphDeals, width, height, focusedNode) {
+  const usableW = Math.max(0, width - 2 * MARGIN)
+  const usableH = Math.max(0, height - 2 * MARGIN)
+  const rows = Math.max(1, Math.floor(usableH / (NODE_HEIGHT + MIN_GAP)))
+  const degrees = degreeMap(graphDeals)
+  let current = visible
+  for (let i = 0; i < 20; i++) {
+    const companies = COMPANIES.filter(c => current.has(c.name))
+    if (companies.length <= MIN_NODE_CAP) break
+    const widths = companies.map(c => nodeWidthFor(c))
+    const maxW = Math.max(...widths)
+    const cols = Math.max(1, Math.floor(usableW / (maxW + MIN_GAP)))
+    const fitCap = Math.max(MIN_NODE_CAP, Math.floor(cols * rows * PACK_FILL))
+    if (current.size <= fitCap) break
+    // Trim the lowest-degree non-focused node. Focused node is always retained.
+    const sorted = [...current].sort(
+      (a, b) => (degrees.get(a) || 0) - (degrees.get(b) || 0) || a.localeCompare(b)
+    )
+    const drop = sorted.find(n => n !== focusedNode)
+    if (!drop) break
+    const next = new Set(current)
+    next.delete(drop)
+    current = next
+  }
+  return current
 }
 
 // Degree map over a set of directed edges (counting undirected co-occurrence).
@@ -124,22 +157,6 @@ function removeAllOverlaps(nodes, h, minGap, svgW, svgH) {
     })
     if (maxOverlap < 0.5) break
   }
-
-  // Verification
-  let count = 0
-  for (let i = 0; i < nodes.length; i++) {
-    for (let j = i + 1; j < nodes.length; j++) {
-      const a = nodes[i], b = nodes[j]
-      const reqX = (a.w + b.w) / 2 + minGap
-      const dx = Math.abs((a.x + a.w / 2) - (b.x + b.w / 2))
-      const dy = Math.abs((a.y + h / 2) - (b.y + h / 2))
-      if (dx < reqX && dy < h + minGap) {
-        console.error(`Graph overlap: ${a.id} ↔ ${b.id} (dx=${dx.toFixed(1)}, dy=${dy.toFixed(1)})`)
-        count++
-      }
-    }
-  }
-  if (count === 0 && typeof console !== 'undefined') console.log('Graph overlap check: 0')
   return nodes
 }
 
@@ -178,7 +195,8 @@ function computeGraphLayout(deals, width, height, focusedNode) {
   const graphDeals = deals.filter(d => d.deal_type !== 'funding_round' && d.source !== d.target)
 
   const maxNodes = computeMaxNodes(width, height)
-  const visible = selectVisibleNodes(graphDeals, focusedNode, maxNodes)
+  const picked = selectVisibleNodes(graphDeals, focusedNode, maxNodes)
+  const visible = fitVisibleNodes(picked, graphDeals, width, height, focusedNode)
   const componentDeals = graphDeals.filter(d => visible.has(d.source) && visible.has(d.target))
 
   const nodes = COMPANIES

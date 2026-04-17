@@ -1069,6 +1069,21 @@
 
 .clickableRow { cursor: pointer; }
 
+/* Company name in DealTable's Source/Target cells — click to open
+   the profile panel for that company. Underlines on hover only,
+   inherits row font size. */
+.companyNameLink {
+  color: var(--text);
+  cursor: pointer;
+  text-decoration: none;
+  transition: text-decoration-color 150ms ease;
+}
+.companyNameLink:hover {
+  text-decoration: underline;
+  text-decoration-color: var(--link-underline);
+  text-underline-offset: 2px;
+}
+
 .sortIndicator { color: var(--text-muted); margin-left: 2px; }
 
 /* SourcesSection */

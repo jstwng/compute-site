@@ -15,7 +15,7 @@ const COLUMNS = [
   { id: 'source_url',     label: 'Source',     align: 'center' },
 ]
 
-export default function DealTable({ deals, hoveredEdge, scrollToDealId, onHoverEdge, banner }) {
+export default function DealTable({ deals, hoveredEdge, scrollToDealId, onHoverEdge, onClickCompany, banner }) {
   const [sort, setSort] = useState({ column: 'value_billions', direction: 'desc' })
   const [flashedId, setFlashedId] = useState(null)
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
@@ -106,8 +106,34 @@ export default function DealTable({ deals, hoveredEdge, scrollToDealId, onHoverE
                 onMouseLeave={() => onHoverEdge?.(null)}
                 onClick={() => toggleExpanded(d.id)}
               >
-                <td>{d.source}</td>
-                <td>{d.source === d.target ? <span className={styles.fundingDash}>—</span> : d.target}</td>
+                <td>
+                  {onClickCompany ? (
+                    <span
+                      className={styles.companyNameLink}
+                      onClick={e => { e.stopPropagation(); onClickCompany(d.source) }}
+                      role="button"
+                      tabIndex={0}
+                      onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); onClickCompany(d.source) } }}
+                    >
+                      {d.source}
+                    </span>
+                  ) : d.source}
+                </td>
+                <td>
+                  {d.source === d.target ? <span className={styles.fundingDash}>—</span> : (
+                    onClickCompany ? (
+                      <span
+                        className={styles.companyNameLink}
+                        onClick={e => { e.stopPropagation(); onClickCompany(d.target) }}
+                        role="button"
+                        tabIndex={0}
+                        onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); onClickCompany(d.target) } }}
+                      >
+                        {d.target}
+                      </span>
+                    ) : d.target
+                  )}
+                </td>
                 <td>
                   <span className={styles.dealTypePill}>
                     {type.label}
