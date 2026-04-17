@@ -196,7 +196,15 @@ export default function Dropdown({
                     }}
                   />
                 )}
-                <div style={{ maxHeight: panelMaxHeight, overflowY: 'auto', padding: '4px 0' }}>
+                <div style={{
+                  // On mobile the panel lives inside the MobileFilterSheet's
+                  // scrollable body — let the options list render at full
+                  // content height and rely on the sheet body's scroll so
+                  // every option is reachable without a nested scrollbar.
+                  maxHeight: isMobile ? 'none' : panelMaxHeight,
+                  overflowY: isMobile ? 'visible' : 'auto',
+                  padding: '4px 0',
+                }}>
                   {filtered.length === 0 ? (
                     <div style={{
                       padding: '8px 10px',
