@@ -15,19 +15,11 @@ const COLUMNS = [
   { id: 'source_url',     label: 'Source',     align: 'center' },
 ]
 
-export default function DealTable({ deals, hoveredEdge, scrollToDealId, onHoverEdge, onClickCompany, banner }) {
+export default function DealTable({ deals, hoveredEdge, scrollToDealId, onHoverEdge, onClickCompany, onClickDeal, banner }) {
   const [sort, setSort] = useState({ column: 'value_billions', direction: 'desc' })
   const [flashedId, setFlashedId] = useState(null)
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
-  const [expandedIds, setExpandedIds] = useState(() => new Set())
 
-  const toggleExpanded = (id) => {
-    setExpandedIds(prev => {
-      const next = new Set(prev)
-      if (next.has(id)) next.delete(id); else next.add(id)
-      return next
-    })
-  }
   const sorted = useMemo(() => sortDeals(deals, sort), [deals, sort])
   const visible = sorted.slice(0, visibleCount)
   const hoverKey = hoveredEdge ? `${hoveredEdge.source}__${hoveredEdge.target}` : null
@@ -91,7 +83,6 @@ export default function DealTable({ deals, hoveredEdge, scrollToDealId, onHoverE
             const highlighted = hoverKey === dealKey
             const flashing = flashedId === d.id
             const type = DEAL_TYPES[d.deal_type]
-            const expanded = expandedIds.has(d.id)
             const description = d.description?.endsWith('.') ? d.description : `${d.description ?? ''}.`
             return (
               <tr
@@ -104,7 +95,7 @@ export default function DealTable({ deals, hoveredEdge, scrollToDealId, onHoverE
                 ].filter(Boolean).join(' ')}
                 onMouseEnter={() => onHoverEdge?.({ source: d.source, target: d.target })}
                 onMouseLeave={() => onHoverEdge?.(null)}
-                onClick={() => toggleExpanded(d.id)}
+                onClick={() => onClickDeal?.({ source: d.source, target: d.target })}
               >
                 <td>
                   {onClickCompany ? (
@@ -142,7 +133,7 @@ export default function DealTable({ deals, hoveredEdge, scrollToDealId, onHoverE
                 <td className={styles.valueCell}>{d.value_display}</td>
                 <td>{d.date_display}</td>
                 <td className={styles.descCell}>
-                  <div className={expanded ? styles.descTextExpanded : styles.descTextTruncated}>
+                  <div className={styles.descTextTruncated}>
                     {description}
                   </div>
                 </td>
