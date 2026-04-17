@@ -115,10 +115,10 @@ function deriveRows(deals) {
 }
 
 const COLUMNS = [
-  { id: 'source',  label: 'Source',           width: '160px', nowrap: true   },
-  { id: 'article', label: 'Article / Report', width: 'auto'                  },
-  { id: 'date',    label: 'Date',             width: '90px',  nowrap: true   },
-  { id: 'deals',   label: 'Deals Referenced', width: '240px'                 },
+  { id: 'source',  label: 'Source',           width: '160px', nowrap: true    },
+  { id: 'article', label: 'Article / Report', width: 'auto'                   },
+  { id: 'date',    label: 'Date',             width: '90px',  nowrap: true    },
+  { id: 'deals',   label: 'Deals Referenced', width: '240px'                  },
   { id: 'link',    label: 'Link',             width: '40px',  align: 'center' },
 ]
 
@@ -232,7 +232,6 @@ export default function SourcesSection() {
             justifyContent: 'center',
             padding: 0,
             fontSize: '12px',
-            borderTop: '1px solid var(--border)',
           }}>
             <div style={{
               display: 'flex',

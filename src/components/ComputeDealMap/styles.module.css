@@ -4,21 +4,41 @@
   gap: 8px;
 }
 
-/* ProfilePanel — right-anchored drill-in panel */
+/* ProfilePanel — fixed slide-in anchored to the viewport's right edge.
+   Fixed positioning (not absolute) so it's independent of graphBlock width
+   and always reliably reachable regardless of the chart container's layout.
+
+   Open uses a @keyframes animation so it plays reliably on mount (no React
+   rAF/reflow dance required). Close uses the transition on the base rule —
+   when .profilePanelOpen is removed, transform reverts to translateX(100%)
+   and the transition animates the slide-out. */
 .profilePanel {
-  position: absolute;
+  position: fixed;
   top: 0;
   right: 0;
-  width: clamp(280px, 35%, 440px);
-  height: 100%;
+  width: clamp(320px, 28%, 440px);
+  height: 100vh;
   background: var(--bg);
   border-left: 1px solid var(--border);
   padding: 16px;
   overflow-y: auto;
-  z-index: 30;
+  z-index: 1000;
   font-size: 12px;
   color: var(--text);
   box-sizing: border-box;
+  transform: translateX(100%);
+  transition: transform 300ms ease;
+  will-change: transform;
+}
+
+.profilePanelOpen {
+  transform: translateX(0);
+  animation: profilePanelSlideInRight 300ms ease;
+}
+
+@keyframes profilePanelSlideInRight {
+  from { transform: translateX(100%); }
+  to   { transform: translateX(0); }
 }
 
 .profilePanelHeader {
@@ -57,6 +77,48 @@
 .profileMeta {
   color: var(--text-muted);
   margin-bottom: 4px;
+}
+
+.profileDescription {
+  color: var(--text);
+  line-height: 1.5;
+  margin: 4px 0 8px;
+}
+
+/* Horizontal divider below the company description + source in the
+   profile panel. Only standalone horizontal rule on the site; every
+   other standalone separator has been stripped. */
+.profilePanelDivider {
+  border: none;
+  border-top: 1px solid var(--border-soft);
+  margin: 12px 0 4px;
+  height: 0;
+}
+
+/* Canonical source affordance — the ↗ glyph shared across ProfilePanel
+   (description + deal rows), DealTable, DealCard, SourcesSection.
+   Rendered as a plain white arrow; no underline since it's a glyph,
+   not text. Brightens to --text-strong on hover. */
+.profileDescriptionSource,
+.profileDealSource,
+.dealCardLink,
+.sourceLink,
+.sourcesLink {
+  color: var(--text);
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+  pointer-events: auto;
+  transition: color 150ms ease;
+}
+
+.profileDescriptionSource:hover,
+.profileDealSource:hover,
+.dealCardLink:hover,
+.sourceLink:hover,
+.sourcesLink:hover {
+  color: var(--text-strong);
+  text-decoration: none;
 }
 
 .profileFocusLink {
@@ -142,16 +204,9 @@
 }
 .profileDealCounterparty { color: var(--text); font-weight: 600; }
 .profileDealDesc { margin: 4px 0; }
-.profileDealSource {
-  color: var(--text);
-  text-decoration: underline;
-  text-decoration-color: var(--link-underline);
-  text-underline-offset: 2px;
-}
 
 @media (max-width: 900px) {
   .profilePanel {
-    position: fixed;
     top: auto;
     bottom: 0;
     left: 0;
@@ -160,7 +215,15 @@
     height: 85vh;
     border-left: none;
     border-top: 1px solid var(--border);
-    z-index: 1000;
+    transform: translateY(100%);
+  }
+  .profilePanelOpen {
+    transform: translateY(0);
+    animation: profilePanelSlideInUp 300ms ease;
+  }
+  @keyframes profilePanelSlideInUp {
+    from { transform: translateY(100%); }
+    to   { transform: translateY(0); }
   }
 }
 
@@ -280,82 +343,6 @@
 }
 
 /* TraceStrip — status line + path selector (active when Trace is on) */
-.traceStrip {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: 6px 0;
-  margin-bottom: 8px;
-  font-size: 12px;
-  color: var(--text);
-  border-top: 1px solid var(--border-soft);
-  border-bottom: 1px solid var(--border-soft);
-}
-.traceStripRow {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 16px;
-  min-height: 28px;
-  flex-wrap: wrap;
-}
-
-.traceStripDropdowns {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.traceStripHint {
-  flex: 1;
-  min-width: 0;
-}
-.traceStripHint strong { font-weight: 600; }
-
-.traceStripActions {
-  display: flex;
-  gap: 12px;
-}
-.traceStripLink {
-  font: inherit;
-  font-size: 12px;
-  color: var(--text-muted);
-  background: transparent;
-  border: none;
-  padding: 0;
-  cursor: pointer;
-  text-decoration: underline;
-  text-decoration-color: var(--link-underline);
-  text-underline-offset: 2px;
-}
-.traceStripLink:hover { color: var(--text); }
-
-.traceStripPaths {
-  display: flex;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-.traceStripPathChip,
-.traceStripPathChipActive {
-  font: inherit;
-  font-size: 12px;
-  color: var(--text);
-  background: transparent;
-  border: none;
-  padding: 2px 8px;
-  cursor: pointer;
-  opacity: 0.7;
-  border-bottom: 1px solid transparent;
-}
-.traceStripPathChip { font-weight: 400; }
-.traceStripPathChipActive {
-  font-weight: 500;
-  opacity: 1;
-  border-bottom-color: var(--text);
-}
-.traceStripPathChip:hover { opacity: 1; }
-
 /* Toolbar — search + trace/timeline/cluster dropdowns */
 .toolbar {
   display: flex;
@@ -909,12 +896,6 @@
   margin: 0 0 6px;
 }
 
-.dealCardDivider {
-  border: none;
-  border-top: 1px solid var(--border);
-  margin: 6px 0 8px;
-}
-
 .dealCardAggregate {
   font-weight: 600;
   color: var(--text);
@@ -932,13 +913,6 @@
 
 .dealCardList li strong { color: var(--text); }
 
-.dealCardLink {
-  color: var(--text);
-  text-decoration: underline;
-  text-decoration-color: var(--link-underline);
-  cursor: pointer;
-  pointer-events: auto;
-}
 
 /* CompanyCard */
 .companyCard {
@@ -1096,7 +1070,6 @@
 .clickableRow { cursor: pointer; }
 
 .sortIndicator { color: var(--text-muted); margin-left: 2px; }
-.sourceLink { color: var(--text-strong); }
 
 /* SourcesSection */
 .sourcesSection {
@@ -1128,17 +1101,6 @@
   white-space: nowrap;
 }
 
-.sourcesLink {
-  color: var(--text);
-  text-decoration: none;
-  border-bottom: none;
-}
-
-.sourcesLink:hover {
-  text-decoration: underline;
-  text-decoration-color: var(--link-underline);
-  text-underline-offset: 2px;
-}
 
 @keyframes flashHighlight {
   0%   { background: var(--row-flash); }

@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import styles from './styles.module.css'
 import { DEAL_TYPES } from './data.js'
 
@@ -10,6 +10,21 @@ export default function ProfilePanel({
   onFocusCompany,
   timelineRange,
 }) {
+  // Keep last non-null content mounted through the slide-out animation so
+  // there's something to paint while the close transition runs. Cleared
+  // after the transition finishes.
+  const [shownContent, setShownContent] = useState(null)
+
+  useEffect(() => {
+    if (content) {
+      setShownContent(content)
+      return
+    }
+    if (!shownContent) return
+    const t = setTimeout(() => setShownContent(null), 320)
+    return () => clearTimeout(t)
+  }, [content, shownContent])
+
   useEffect(() => {
     if (!content) return
     const onKey = e => { if (e.key === 'Escape') onClose() }
@@ -17,25 +32,37 @@ export default function ProfilePanel({
     return () => window.removeEventListener('keydown', onKey)
   }, [content, onClose])
 
-  if (!content) return null
+  if (!shownContent) return null
+
+  // Open animation is a CSS @keyframes that plays every time the
+  // profilePanelOpen class is applied — no React rAF dance required.
+  // Close animation is the transition on the base .profilePanel transform.
+  const isOpen = !!content
+  const panelClass = isOpen
+    ? `${styles.profilePanel} ${styles.profilePanelOpen}`
+    : styles.profilePanel
 
   return (
-    <aside className={styles.profilePanel} role="complementary">
+    <aside
+      className={panelClass}
+      role="complementary"
+      aria-hidden={!isOpen}
+    >
       <div className={styles.profilePanelHeader}>
         <button type="button" className={styles.profilePanelClose} onClick={onClose}>
           Close
         </button>
       </div>
       <div className={styles.profilePanelBody}>
-        {content.mode === 'company'
+        {shownContent.mode === 'company'
           ? <CompanyMode
-              content={content}
+              content={shownContent}
               onScrollToRow={onScrollToRow}
               onFocusCompany={onFocusCompany}
               timelineRange={timelineRange}
             />
           : <DealMode
-              content={content}
+              content={shownContent}
               onOpenCompany={onOpenCompany}
               onScrollToRow={onScrollToRow}
               timelineRange={timelineRange}
@@ -47,7 +74,7 @@ export default function ProfilePanel({
 }
 
 function CompanyMode({ content, onScrollToRow, onFocusCompany, timelineRange }) {
-  const { company, aggregates, deals, counterpartyFilter, onSetCounterpartyFilter } = content
+  const { company, deals, counterpartyFilter, onSetCounterpartyFilter } = content
 
   const counterpartiesSorted = useMemo(() => {
     const counts = new Map()
@@ -63,12 +90,6 @@ function CompanyMode({ content, onScrollToRow, onFocusCompany, timelineRange }) 
     ? deals.filter(d => (d.source === company.name ? d.target : d.source) === counterpartyFilter)
     : deals
 
-  const yearRange = aggregates.earliest && aggregates.latest
-    ? `${aggregates.earliest.slice(0, 4)}–${aggregates.latest.slice(0, 4)}`
-    : ''
-
-  const counterpartyCount = aggregates.counterparties.size
-
   return (
     <>
       <div>
@@ -76,15 +97,26 @@ function CompanyMode({ content, onScrollToRow, onFocusCompany, timelineRange }) 
           <span className={styles.profileName}>{company.name}</span>
           {company.ticker && <span className={styles.profileTicker}>{company.ticker}</span>}
         </div>
-        <div className={styles.profileMeta}>
-          {aggregates.totalDeals} deals · {counterpartyCount} counterparties{yearRange ? ` · ${yearRange}` : ''}
-        </div>
-        {aggregates.topDealTypes.length > 0 && (
-          <div className={styles.profileMeta}>
-            {aggregates.topDealTypes
-              .map(t => DEAL_TYPES[t]?.label?.toLowerCase() ?? t.replace(/_/g, ' '))
-              .join(', ')}
-          </div>
+        {company.description && (
+          <>
+            <p className={styles.profileDescription}>
+              {company.description}
+              {company.descriptionSource && (
+                <>
+                  {' '}
+                  <a
+                    className={styles.profileDescriptionSource}
+                    href={company.descriptionSource}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    ↗
+                  </a>
+                </>
+              )}
+            </p>
+            <hr className={styles.profilePanelDivider} />
+          </>
         )}
         {onFocusCompany && (
           <button
@@ -161,7 +193,7 @@ function CompanyMode({ content, onScrollToRow, onFocusCompany, timelineRange }) 
                         rel="noreferrer"
                         onClick={e => e.stopPropagation()}
                       >
-                        View source
+                        ↗
                       </a>
                     )}
                   </div>
@@ -226,7 +258,7 @@ function DealMode({ content, onOpenCompany, onScrollToRow, timelineRange }) {
                       rel="noreferrer"
                       onClick={e => e.stopPropagation()}
                     >
-                      View source
+                      Source
                     </a>
                   )}
                 </div>

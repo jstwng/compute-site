@@ -1,4 +1,5 @@
 import raw from './companies.generated.json'
+import { DESCRIPTIONS } from './company-descriptions.js'
 
 export const CATEGORIES = {
   chip_designer: { label: 'Chip designers' },
@@ -21,14 +22,19 @@ export function categoryLabel(slug) {
     slug.split('_').filter(w => w.length > 0).map(w => w[0].toUpperCase() + w.slice(1)).join(' ')
 }
 
-export const COMPANIES = raw.map(c => ({
-  name: c.name,
-  ticker: c.ticker ?? null,
-  category: c.category,
-  subline: c.subline ?? '',
-  slug: c.slug,
-  ...(c.acquired ? { acquired: true } : {}),
-}))
+export const COMPANIES = raw.map(c => {
+  const entry = DESCRIPTIONS[c.slug] ?? {}
+  return {
+    name: c.name,
+    ticker: c.ticker ?? null,
+    category: c.category,
+    subline: c.subline ?? '',
+    description: entry.description ?? '',
+    descriptionSource: entry.source ?? null,
+    slug: c.slug,
+    ...(c.acquired ? { acquired: true } : {}),
+  }
+})
 
 export const COLUMNS = [
   { id: 'chip_designer', label: 'Chip Designers', companies: COMPANIES.filter(c => c.category === 'chip_designer') },

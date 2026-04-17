@@ -515,7 +515,7 @@ export default function Graph({ deals, hoveredEdge, onHoverEdge, hoveredNode, on
                 style={{
                   transition: 'opacity 150ms ease, stroke-width 150ms ease',
                   cursor: hoveredNode ? 'default' : 'pointer',
-                  pointerEvents: edgeVisible ? 'auto' : 'none',
+                  ...(edgeVisible ? null : { pointerEvents: 'none' }),
                 }}
                 aria-label={`${d.source} to ${d.target}: ${d.deal_type}`}
                 onMouseEnter={() => { if (!hoveredNode && edgeVisible) onHoverEdge({ source: d.source, target: d.target }) }}
@@ -542,7 +542,7 @@ export default function Graph({ deals, hoveredEdge, onHoverEdge, hoveredNode, on
                   transition: 'transform 300ms ease-out, opacity 150ms ease',
                   cursor: nodeVisible ? 'pointer' : 'default',
                   opacity: nodeOpacity,
-                  pointerEvents: nodeVisible ? 'auto' : 'none',
+                  ...(nodeVisible ? null : { pointerEvents: 'none' }),
                 }}
                 onMouseEnter={() => { if (nodeVisible) onHoverNode(company.name) }}
                 onMouseLeave={() => { if (!cardPinned) onHoverNode(null) }}

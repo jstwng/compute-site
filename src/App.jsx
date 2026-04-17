@@ -192,22 +192,32 @@ export default function App() {
   // under each hop in the Trace path breakdown.
   const pathEdgeTypes = useMemo(() => edgeDealTypes(traceDeals), [traceDeals])
 
-  const openCompany = useCallback(name => {
-    setPanelMode('company')
-    setPanelKey(name)
-    setCounterpartyFilter(null)
-  }, [])
-
-  const openDeal = useCallback(edge => {
-    setPanelMode('deal')
-    setPanelKey(`${edge.source}__${edge.target}`)
-  }, [])
-
   const closePanel = useCallback(() => {
     setPanelMode(null)
     setPanelKey(null)
     setCounterpartyFilter(null)
   }, [])
+
+  const openCompany = useCallback(name => {
+    // Click-to-toggle: re-clicking the already-open company closes the panel.
+    if (panelMode === 'company' && panelKey === name) {
+      closePanel()
+      return
+    }
+    setPanelMode('company')
+    setPanelKey(name)
+    setCounterpartyFilter(null)
+  }, [panelMode, panelKey, closePanel])
+
+  const openDeal = useCallback(edge => {
+    const key = `${edge.source}__${edge.target}`
+    if (panelMode === 'deal' && panelKey === key) {
+      closePanel()
+      return
+    }
+    setPanelMode('deal')
+    setPanelKey(key)
+  }, [panelMode, panelKey, closePanel])
 
   const handleFocusCompany = useCallback(name => {
     setFocusedNode(name)

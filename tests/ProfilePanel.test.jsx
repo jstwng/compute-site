@@ -36,10 +36,14 @@ describe('ProfilePanel', () => {
     expect(screen.getByText('Close')).toBeInTheDocument()
   })
 
-  it('renders company mode identity and metadata', () => {
+  it('renders company mode identity and description', () => {
     const content = {
       mode: 'company',
-      company: { name: 'NVIDIA', ticker: 'NVDA' },
+      company: {
+        name: 'NVIDIA',
+        ticker: 'NVDA',
+        description: 'Designs the dominant GPUs for AI training and inference.',
+      },
       aggregates: {
         totalDeals: 11,
         counterparties: new Set(['A', 'B', 'C']),
@@ -61,9 +65,7 @@ describe('ProfilePanel', () => {
     )
     expect(screen.getByText('NVIDIA')).toBeInTheDocument()
     expect(screen.getByText('NVDA')).toBeInTheDocument()
-    expect(screen.getByText(/11 deals/)).toBeInTheDocument()
-    expect(screen.getByText(/3 counterparties/)).toBeInTheDocument()
-    expect(screen.getByText(/2019–2026/)).toBeInTheDocument()
+    expect(screen.getByText(/Designs the dominant GPUs/)).toBeInTheDocument()
   })
 
   it('renders deal mode with both company names and jump links', () => {

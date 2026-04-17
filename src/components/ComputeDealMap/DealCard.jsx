@@ -25,7 +25,7 @@ export default function DealCard({ edge, x, y, containerWidth, containerHeight }
             {' '}({d.date_display})<br />
             {d.description}{' '}
             {d.source_url && (
-              <a className={styles.dealCardLink} href={d.source_url} target="_blank" rel="noreferrer">src</a>
+              <a className={styles.dealCardLink} href={d.source_url} target="_blank" rel="noreferrer">↗</a>
             )}
           </li>
         ))}

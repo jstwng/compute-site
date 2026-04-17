@@ -3,6 +3,8 @@ import styles from './styles.module.css'
 import { DEAL_TYPES } from './data.js'
 import { sortDeals } from './logic.js'
 
+const PAGE_SIZE = 20
+
 const COLUMNS = [
   { id: 'source',         label: 'Source',     nowrap: true },
   { id: 'target',         label: 'Target',     nowrap: true },
@@ -10,13 +12,13 @@ const COLUMNS = [
   { id: 'value_billions', label: 'Value',      align: 'right', nowrap: true },
   { id: 'date',           label: 'Date',       nowrap: true },
   { id: 'description',    label: 'Description' },
-  { id: 'source_url',     label: 'Src',        align: 'center' },
+  { id: 'source_url',     label: 'Source',     align: 'center' },
 ]
 
 export default function DealTable({ deals, hoveredEdge, scrollToDealId, onHoverEdge, banner }) {
   const [sort, setSort] = useState({ column: 'value_billions', direction: 'desc' })
   const [flashedId, setFlashedId] = useState(null)
-  const [visibleCount, setVisibleCount] = useState(20)
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE)
   const [expandedIds, setExpandedIds] = useState(() => new Set())
 
   const toggleExpanded = (id) => {
@@ -31,7 +33,7 @@ export default function DealTable({ deals, hoveredEdge, scrollToDealId, onHoverE
   const hoverKey = hoveredEdge ? `${hoveredEdge.source}__${hoveredEdge.target}` : null
 
   useEffect(() => {
-    setVisibleCount(20)
+    setVisibleCount(PAGE_SIZE)
   }, [deals])
 
   useEffect(() => {
@@ -132,7 +134,6 @@ export default function DealTable({ deals, hoveredEdge, scrollToDealId, onHoverE
           justifyContent: 'center',
           padding: 0,
           fontSize: '12px',
-          borderTop: '1px solid var(--border)',
         }}>
           <div style={{
             display: 'flex',
@@ -140,17 +141,21 @@ export default function DealTable({ deals, hoveredEdge, scrollToDealId, onHoverE
             gap: '16px',
             padding: '6px 12px',
           }}>
-            {sorted.length > visibleCount && (
-              <span
-                role="button"
-                tabIndex={0}
-                onClick={() => setVisibleCount(prev => prev + 20)}
-                onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') setVisibleCount(prev => prev + 20) }}
-                style={{ cursor: 'pointer', fontWeight: 400, color: 'var(--text)' }}
-              >
-                Show 20 more
-              </span>
-            )}
+            {sorted.length > visibleCount && (() => {
+              const remaining = sorted.length - visibleCount
+              const nextChunk = Math.min(PAGE_SIZE, remaining)
+              return (
+                <span
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => setVisibleCount(prev => prev + nextChunk)}
+                  onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') setVisibleCount(prev => prev + nextChunk) }}
+                  style={{ cursor: 'pointer', fontWeight: 400, color: 'var(--text)' }}
+                >
+                  Show {nextChunk} more
+                </span>
+              )
+            })()}
             <span style={{ color: 'var(--text-muted)' }}>
               Showing {Math.min(visibleCount, sorted.length) === sorted.length
                 ? `all ${sorted.length}`
