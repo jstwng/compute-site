@@ -505,9 +505,31 @@
 .toolbarPanelLink:hover { color: var(--text-strong); }
 
 @media (max-width: 767px) {
-  .toolbar { gap: 8px; flex-wrap: wrap; }
-  .toolbarChips { flex: 1 1 100%; flex-wrap: wrap; }
-  .toolbarSearch { flex: 1 1 100%; min-width: 0; }
+  .toolbar {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .toolbarSearch {
+    flex: 1 1 100%;
+    min-width: 0;
+    height: 40px;
+    font-size: 14px;
+    order: 1;
+  }
+  .toolbarChips {
+    flex: 1 1 100%;
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 4px;
+    order: 2;
+  }
+  .toolbarChips > * { width: 100%; }
+  .toolbarChips button {
+    height: 40px;
+    width: 100%;
+    justify-content: flex-start;
+    font-size: 13px;
+  }
 }
 
 .subtitle {
@@ -1307,4 +1329,21 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
+}
+
+.toolbarMobileChip {
+  height: 40px;
+  padding: 0 8px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
 }

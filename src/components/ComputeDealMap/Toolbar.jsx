@@ -3,6 +3,8 @@ import styles from './styles.module.css'
 import Dropdown from './Dropdown.jsx'
 import { COMPANIES, CATEGORIES } from './companies.js'
 import { EARLIEST_DATE, LATEST_DATE, DEAL_TYPES } from './data.js'
+import useMediaQuery from './useMediaQuery.js'
+import MobileFilterSheet from './MobileFilterSheet.jsx'
 
 const earliestYear = parseInt(EARLIEST_DATE.slice(0, 4), 10)
 const latestYear = parseInt(LATEST_DATE.slice(0, 4), 10)
@@ -70,6 +72,9 @@ export default function Toolbar({
     onOpenChange: v => setOpenKey(v ? key : null),
   })
 
+  const isMobile = useMediaQuery('(max-width: 767px)')
+  const [mobileSheet, setMobileSheet] = useState(null)
+
   const clusterOptions = useMemo(() => {
     const present = new Set(COMPANIES.map(c => c.category))
     return [...present]
@@ -112,29 +117,202 @@ export default function Toolbar({
   return (
     <div className={styles.toolbar}>
       <div className={styles.toolbarChips}>
-        {/* TRACE dropdown */}
-        <Dropdown label="Trace" displayValue={traceDisplay} {...dropdownToggle('trace')}>
-          <div className={styles.toolbarPanelInner}>
-            <div className={styles.toolbarPanelRow}>
-              <Dropdown
-                label="From"
-                options={companyOptions}
-                value={traceOrigin}
-                onChange={onChangeTraceOrigin}
-                searchable
-                placeholder="—"
-                panelMaxHeight={260}
-              />
-              <Dropdown
-                label="To"
-                options={destinationOptions}
-                value={traceDestination}
-                onChange={onChangeTraceDestination}
-                searchable
-                placeholder="—"
-                panelMaxHeight={260}
-              />
-            </div>
+        {isMobile ? (
+          <>
+            <button
+              type="button"
+              className={styles.toolbarMobileChip}
+              onClick={() => setMobileSheet('trace')}
+            >
+              <span style={{ fontWeight: 600 }}>Trace:</span>{' '}
+              <span>{traceDisplay}</span>
+            </button>
+            <button
+              type="button"
+              className={styles.toolbarMobileChip}
+              onClick={() => setMobileSheet('timeline')}
+            >
+              <span style={{ fontWeight: 600 }}>Timeline:</span>{' '}
+              <span>{timelineDisplay}</span>
+            </button>
+            <button
+              type="button"
+              className={styles.toolbarMobileChip}
+              onClick={() => setMobileSheet('cluster')}
+            >
+              <span style={{ fontWeight: 600 }}>Cluster:</span>{' '}
+              <span>{clusterDisplay}</span>
+            </button>
+          </>
+        ) : (
+          <>
+            {/* TRACE dropdown */}
+            <Dropdown label="Trace" displayValue={traceDisplay} {...dropdownToggle('trace')}>
+              <div className={styles.toolbarPanelInner}>
+                <div className={styles.toolbarPanelRow}>
+                  <Dropdown
+                    label="From"
+                    options={companyOptions}
+                    value={traceOrigin}
+                    onChange={onChangeTraceOrigin}
+                    searchable
+                    placeholder="—"
+                    panelMaxHeight={260}
+                  />
+                  <Dropdown
+                    label="To"
+                    options={destinationOptions}
+                    value={traceDestination}
+                    onChange={onChangeTraceDestination}
+                    searchable
+                    placeholder="—"
+                    panelMaxHeight={260}
+                  />
+                </div>
+                {tracePaths && tracePaths.length > 0 && (
+                  <div className={styles.toolbarPathList}>
+                    {tracePaths.map((p, i) => {
+                      const isActive = i === tracePathIndex
+                      const isSelectable = tracePaths.length > 1
+                      const hasMultipleEdges = p.length > 2
+                      const label = `Path ${i + 1}: ${p.join(' to ')}`
+                      return (
+                        <div key={i} className={styles.toolbarPathItem}>
+                          {isSelectable ? (
+                            <button
+                              type="button"
+                              className={isActive ? styles.toolbarPathRowActive : styles.toolbarPathRow}
+                              onClick={() => onSelectTracePath(i)}
+                            >
+                              {label}
+                            </button>
+                          ) : (
+                            <div className={styles.toolbarPathRowActive}>{label}</div>
+                          )}
+                          {isActive && hasMultipleEdges && (
+                            <ul className={styles.toolbarPathEdges}>
+                              {p.slice(0, -1).map((n, idx) => {
+                                const nextNode = p[idx + 1]
+                                const edgeTypes = formatEdgeTypes(n, nextNode)
+                                return (
+                                  <li key={idx}>
+                                    <span className={styles.toolbarPathEdgeHop}>{n} to {nextNode}</span>
+                                    {edgeTypes && (
+                                      <span className={styles.toolbarPathEdgeType}> — {edgeTypes}</span>
+                                    )}
+                                  </li>
+                                )
+                              })}
+                            </ul>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+                {(traceOrigin || traceDestination) && (
+                  <div className={styles.toolbarPanelActions}>
+                    {traceNoPath && (
+                      <button type="button" className={styles.toolbarPanelLink} onClick={onSwapTrace}>Swap</button>
+                    )}
+                    <button type="button" className={styles.toolbarPanelLink} onClick={onClearTrace}>Clear</button>
+                  </div>
+                )}
+              </div>
+            </Dropdown>
+
+            {/* TIMELINE dropdown */}
+            <Dropdown label="Timeline" displayValue={timelineDisplay} {...dropdownToggle('timeline')}>
+              <div className={styles.toolbarPanelInner}>
+                <div className={styles.toolbarPanelRow}>
+                  <Dropdown
+                    label="From"
+                    options={yearRangeOptions(earliestYear, toYear)}
+                    value={String(fromYear)}
+                    onChange={v => {
+                      const next = parseInt(v, 10)
+                      onChangeTimeline({ from: yearToFrom(next), to: yearToTo(toYear) })
+                    }}
+                    panelMaxHeight={240}
+                  />
+                  <Dropdown
+                    label="To"
+                    options={yearRangeOptions(fromYear, latestYear)}
+                    value={String(toYear)}
+                    onChange={v => {
+                      const next = parseInt(v, 10)
+                      onChangeTimeline({ from: yearToFrom(fromYear), to: yearToTo(next) })
+                    }}
+                    panelMaxHeight={240}
+                  />
+                </div>
+                {!isTimelineDefault && (
+                  <div className={styles.toolbarPanelActions}>
+                    <button type="button" className={styles.toolbarPanelLink} onClick={onClearTimeline}>Reset</button>
+                  </div>
+                )}
+              </div>
+            </Dropdown>
+
+            {/* CLUSTER dropdown — multi-select */}
+            <Dropdown label="Cluster" displayValue={clusterDisplay} {...dropdownToggle('cluster')}>
+              <div className={styles.toolbarPanelInner}>
+                <div className={styles.clusterOptionList}>
+                  {clusterOptions.map(opt => {
+                    const isActive = clusterCategories?.has(opt.value)
+                    return (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        className={isActive ? styles.clusterOptionActive : styles.clusterOption}
+                        onClick={() => onToggleCluster(opt.value)}
+                      >
+                        <span className={styles.clusterOptionCheck}>{isActive ? '\u25A0' : '\u25A1'}</span>
+                        <span>{opt.label}</span>
+                      </button>
+                    )
+                  })}
+                </div>
+                {clusterCategories?.size > 0 && (
+                  <div className={styles.toolbarPanelActions}>
+                    <button type="button" className={styles.toolbarPanelLink} onClick={onClearCluster}>Clear</button>
+                  </div>
+                )}
+              </div>
+            </Dropdown>
+          </>
+        )}
+      </div>
+      <input
+        className={styles.toolbarSearch}
+        type="text"
+        placeholder="Search companies, deals, categories"
+        value={search}
+        onChange={e => onSearch(e.target.value)}
+      />
+      {isMobile && (
+        <>
+          <MobileFilterSheet
+            isOpen={mobileSheet === 'trace'}
+            title="Trace"
+            onClose={() => setMobileSheet(null)}
+          >
+            <Dropdown
+              label="From"
+              options={companyOptions}
+              value={traceOrigin}
+              onChange={onChangeTraceOrigin}
+              placeholder="—"
+              nativeOnMobile
+            />
+            <Dropdown
+              label="To"
+              options={destinationOptions}
+              value={traceDestination}
+              onChange={onChangeTraceDestination}
+              placeholder="—"
+              nativeOnMobile
+            />
             {tracePaths && tracePaths.length > 0 && (
               <div className={styles.toolbarPathList}>
                 {tracePaths.map((p, i) => {
@@ -184,45 +362,47 @@ export default function Toolbar({
                 <button type="button" className={styles.toolbarPanelLink} onClick={onClearTrace}>Clear</button>
               </div>
             )}
-          </div>
-        </Dropdown>
+          </MobileFilterSheet>
 
-        {/* TIMELINE dropdown */}
-        <Dropdown label="Timeline" displayValue={timelineDisplay} {...dropdownToggle('timeline')}>
-          <div className={styles.toolbarPanelInner}>
-            <div className={styles.toolbarPanelRow}>
-              <Dropdown
-                label="From"
-                options={yearRangeOptions(earliestYear, toYear)}
-                value={String(fromYear)}
-                onChange={v => {
-                  const next = parseInt(v, 10)
-                  onChangeTimeline({ from: yearToFrom(next), to: yearToTo(toYear) })
-                }}
-                panelMaxHeight={240}
-              />
-              <Dropdown
-                label="To"
-                options={yearRangeOptions(fromYear, latestYear)}
-                value={String(toYear)}
-                onChange={v => {
-                  const next = parseInt(v, 10)
-                  onChangeTimeline({ from: yearToFrom(fromYear), to: yearToTo(next) })
-                }}
-                panelMaxHeight={240}
-              />
-            </div>
+          <MobileFilterSheet
+            isOpen={mobileSheet === 'timeline'}
+            title="Timeline"
+            onClose={() => setMobileSheet(null)}
+          >
+            <Dropdown
+              label="From"
+              options={yearRangeOptions(earliestYear, toYear)}
+              value={String(fromYear)}
+              onChange={(v) => {
+                const next = parseInt(v, 10)
+                onChangeTimeline({ from: yearToFrom(next), to: yearToTo(toYear) })
+              }}
+              nativeOnMobile
+            />
+            <Dropdown
+              label="To"
+              options={yearRangeOptions(fromYear, latestYear)}
+              value={String(toYear)}
+              onChange={(v) => {
+                const next = parseInt(v, 10)
+                onChangeTimeline({ from: yearToFrom(fromYear), to: yearToTo(next) })
+              }}
+              nativeOnMobile
+            />
             {!isTimelineDefault && (
-              <div className={styles.toolbarPanelActions}>
-                <button type="button" className={styles.toolbarPanelLink} onClick={onClearTimeline}>Reset</button>
-              </div>
+              <button
+                type="button"
+                className={styles.toolbarPanelLink}
+                onClick={onClearTimeline}
+              >Reset</button>
             )}
-          </div>
-        </Dropdown>
+          </MobileFilterSheet>
 
-        {/* CLUSTER dropdown — multi-select */}
-        <Dropdown label="Cluster" displayValue={clusterDisplay} {...dropdownToggle('cluster')}>
-          <div className={styles.toolbarPanelInner}>
+          <MobileFilterSheet
+            isOpen={mobileSheet === 'cluster'}
+            title="Cluster"
+            onClose={() => setMobileSheet(null)}
+          >
             <div className={styles.clusterOptionList}>
               {clusterOptions.map(opt => {
                 const isActive = clusterCategories?.has(opt.value)
@@ -240,20 +420,15 @@ export default function Toolbar({
               })}
             </div>
             {clusterCategories?.size > 0 && (
-              <div className={styles.toolbarPanelActions}>
-                <button type="button" className={styles.toolbarPanelLink} onClick={onClearCluster}>Clear</button>
-              </div>
+              <button
+                type="button"
+                className={styles.toolbarPanelLink}
+                onClick={onClearCluster}
+              >Clear</button>
             )}
-          </div>
-        </Dropdown>
-      </div>
-      <input
-        className={styles.toolbarSearch}
-        type="text"
-        placeholder="Search companies, deals, categories"
-        value={search}
-        onChange={e => onSearch(e.target.value)}
-      />
+          </MobileFilterSheet>
+        </>
+      )}
     </div>
   )
 }
