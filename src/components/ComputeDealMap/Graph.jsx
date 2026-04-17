@@ -1,4 +1,4 @@
-import { useMemo, useState, useRef, useEffect, useCallback } from 'react'
+import { useMemo, useState, useRef, useEffect, useLayoutEffect, useCallback } from 'react'
 import { forceSimulation, forceLink, forceManyBody, forceCollide, forceX, forceY } from 'd3-force'
 import styles from './styles.module.css'
 import { COMPANIES, findCompany } from './companies.js'
@@ -307,32 +307,48 @@ export default function Graph({ deals, hoveredEdge, onHoverEdge, hoveredNode, on
   const setFocusedNode = onFocusChange ?? setFocusedNodeInternal
   const [hoveringCanvas, setHoveringCanvas] = useState(false)
   const wrapRef = useRef(null)
-  const [dims, setDims] = useState({ w: 800, h: 380 })
+  // dims starts null. useLayoutEffect measures the wrapper synchronously
+  // after the DOM commits but BEFORE the browser paints — so the first
+  // visible paint uses real dimensions, not a guessed default.
+  const [dims, setDims] = useState(null)
 
-  // Measure wrapper for 1:1 viewBox (constant pixel sizes for node/text)
   const updateDims = useCallback(() => {
     if (!wrapRef.current) return
     const r = wrapRef.current.getBoundingClientRect()
     if (r.width > 0 && r.height > 0) {
-      setDims(prev =>
-        Math.abs(prev.w - r.width) < 0.5 && Math.abs(prev.h - r.height) < 0.5
-          ? prev
-          : { w: r.width, h: r.height }
-      )
+      setDims(prev => {
+        if (prev && Math.abs(prev.w - r.width) < 0.5 && Math.abs(prev.h - r.height) < 0.5) return prev
+        return { w: r.width, h: r.height }
+      })
     }
   }, [])
 
-  useEffect(() => {
+  // Pre-paint measurement — blocks the first paint until we know the real
+  // container size, avoiding the flash from a guessed default to the real
+  // layout that the previous strategy produced.
+  useLayoutEffect(() => {
     updateDims()
+  }, [updateDims])
+
+  // Watch for subsequent size changes (resize, modal open, responsive).
+  useEffect(() => {
+    if (!wrapRef.current) return
     const ro = new ResizeObserver(updateDims)
-    if (wrapRef.current) ro.observe(wrapRef.current)
+    ro.observe(wrapRef.current)
     return () => ro.disconnect()
   }, [updateDims])
 
+  // Layout is computed only once dims are known. While dims is null the
+  // positions map is empty and the SVG renders at opacity 0 so the user
+  // never sees a wrong-sized or mid-simulation state.
   const { positions, visible } = useMemo(
-    () => computeGraphLayout(deals, dims.w, dims.h, focusedNode),
-    [deals, dims.w, dims.h, focusedNode]
+    () => dims
+      ? computeGraphLayout(deals, dims.w, dims.h, focusedNode)
+      : { positions: new Map(), visible: new Set() },
+    [deals, dims, focusedNode]
   )
+
+  const layoutReady = positions.size > 0
 
   // If filters drop the focused node out of the dataset, reset focus.
   useEffect(() => {
@@ -480,10 +496,14 @@ export default function Graph({ deals, hoveredEdge, onHoverEdge, hoveredNode, on
       )}
       <svg
         className={styles.graphSvg}
-        viewBox={`0 0 ${dims.w} ${dims.h}`}
+        viewBox={`0 0 ${dims?.w || 800} ${dims?.h || 380}`}
         preserveAspectRatio="none"
         role="img"
         aria-label="Compute deal relationship graph"
+        style={{
+          opacity: layoutReady ? 1 : 0,
+          transition: 'opacity 200ms ease',
+        }}
         onClick={e => {
           if (e.target !== e.currentTarget) return
           if (maximizable && !isModal && onRequestMaximize) onRequestMaximize()
@@ -601,7 +621,7 @@ export default function Graph({ deals, hoveredEdge, onHoverEdge, hoveredNode, on
           })}
         </g>
       </svg>
-      {!hoveredNode && hoveredEdgeAggregate && (() => {
+      {layoutReady && !hoveredNode && hoveredEdgeAggregate && (() => {
         const src = positions.get(hoveredEdge.source)
         const tgt = positions.get(hoveredEdge.target)
         const midX = src && tgt ? (src.x + src.w / 2 + tgt.x + tgt.w / 2) / 2 : cursor.x
@@ -616,7 +636,7 @@ export default function Graph({ deals, hoveredEdge, onHoverEdge, hoveredNode, on
           />
         )
       })()}
-      {hoveredNode && (() => {
+      {layoutReady && hoveredNode && (() => {
         const node = positions.get(hoveredNode)
         // Flip placement above/below the node based on whether the node
         // sits in the top or bottom half of the graph — keeps the card
