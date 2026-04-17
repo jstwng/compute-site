@@ -1245,3 +1245,8 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+.sourceCardList {
+  display: flex;
+  flex-direction: column;
+}

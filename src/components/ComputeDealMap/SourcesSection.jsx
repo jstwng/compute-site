@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react'
 import styles from './styles.module.css'
 import { DEALS } from './data'
+import useMediaQuery from './useMediaQuery.js'
+import SourceCard from './SourceCard.jsx'
 
 // Domain → publisher label. Anything not listed falls back to the bare hostname.
 const PUBLISHER = {
@@ -126,6 +128,7 @@ export default function SourcesSection() {
   const [sort, setSort] = useState({ column: 'date', direction: 'desc' })
   const [visibleCount, setVisibleCount] = useState(20)
   const [expandedIds, setExpandedIds] = useState(() => new Set())
+  const isMobile = useMediaQuery('(max-width: 767px)')
 
   const toggleExpanded = (id) => {
     setExpandedIds(prev => {
@@ -167,65 +170,74 @@ export default function SourcesSection() {
     <div className={styles.sourcesSection}>
       <h3 className={styles.sourcesHeading}>Data Sources</h3>
       <div className={styles.tableWrap}>
-        <table className={styles.table}>
-          <thead>
-            <tr>
-              {COLUMNS.map(c => (
-                <th
-                  key={c.id}
-                  onClick={() => toggleSort(c.id)}
-                  onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') toggleSort(c.id) }}
-                  data-align={c.align}
-                  tabIndex={0}
-                  scope="col"
-                  aria-sort={sort.column === c.id ? (sort.direction === 'asc' ? 'ascending' : 'descending') : 'none'}
-                  style={{
-                    ...(c.width ? { width: c.width } : {}),
-                    ...(c.nowrap ? { whiteSpace: 'nowrap' } : {}),
-                  }}
-                >
-                  {c.label}
-                  {sort.column === c.id && (
-                    <span className={styles.sortIndicator}>
-                      {sort.direction === 'asc' ? ' \u2191' : ' \u2193'}
-                    </span>
-                  )}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {visible.map(r => {
-              const expanded = expandedIds.has(r.n)
-              const truncClass = expanded ? styles.descTextExpanded : styles.descTextTruncated
-              return (
-                <tr
-                  key={r.n}
-                  className={styles.clickableRow}
-                  onClick={() => toggleExpanded(r.n)}
-                >
-                  <td className={styles.sourcesCategoryCell}>{r.source}</td>
-                  <td className={styles.descCell}>
-                    <div className={truncClass}>
+        {!isMobile && (
+          <table className={styles.table}>
+            <thead>
+              <tr>
+                {COLUMNS.map(c => (
+                  <th
+                    key={c.id}
+                    onClick={() => toggleSort(c.id)}
+                    onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') toggleSort(c.id) }}
+                    data-align={c.align}
+                    tabIndex={0}
+                    scope="col"
+                    aria-sort={sort.column === c.id ? (sort.direction === 'asc' ? 'ascending' : 'descending') : 'none'}
+                    style={{
+                      ...(c.width ? { width: c.width } : {}),
+                      ...(c.nowrap ? { whiteSpace: 'nowrap' } : {}),
+                    }}
+                  >
+                    {c.label}
+                    {sort.column === c.id && (
+                      <span className={styles.sortIndicator}>
+                        {sort.direction === 'asc' ? ' \u2191' : ' \u2193'}
+                      </span>
+                    )}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {visible.map(r => {
+                const expanded = expandedIds.has(r.n)
+                const truncClass = expanded ? styles.descTextExpanded : styles.descTextTruncated
+                return (
+                  <tr
+                    key={r.n}
+                    className={styles.clickableRow}
+                    onClick={() => toggleExpanded(r.n)}
+                  >
+                    <td className={styles.sourcesCategoryCell}>{r.source}</td>
+                    <td className={styles.descCell}>
+                      <div className={truncClass}>
+                        {r.url ? (
+                          <a className={styles.sourcesLink} href={r.url} target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()}>{r.article}</a>
+                        ) : r.article}
+                      </div>
+                    </td>
+                    <td>{r.date}</td>
+                    <td>
+                      <div className={truncClass}>{r.deals}</div>
+                    </td>
+                    <td style={{ textAlign: 'center' }} onClick={e => e.stopPropagation()}>
                       {r.url ? (
-                        <a className={styles.sourcesLink} href={r.url} target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()}>{r.article}</a>
-                      ) : r.article}
-                    </div>
-                  </td>
-                  <td>{r.date}</td>
-                  <td>
-                    <div className={truncClass}>{r.deals}</div>
-                  </td>
-                  <td style={{ textAlign: 'center' }} onClick={e => e.stopPropagation()}>
-                    {r.url ? (
-                      <a className={styles.sourceLink} href={r.url} target="_blank" rel="noreferrer">↗</a>
-                    ) : <span className={styles.fundingDash}>—</span>}
-                  </td>
-                </tr>
-              )
-            })}
-          </tbody>
-        </table>
+                        <a className={styles.sourceLink} href={r.url} target="_blank" rel="noreferrer">↗</a>
+                      ) : <span className={styles.fundingDash}>—</span>}
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        )}
+        {isMobile && (
+          <div className={styles.sourceCardList}>
+            {visible.map(r => (
+              <SourceCard key={r.n} row={r} />
+            ))}
+          </div>
+        )}
         {sorted.length > 0 && (
           <div style={{
             display: 'flex',
