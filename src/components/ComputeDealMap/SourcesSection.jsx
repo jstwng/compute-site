@@ -13,7 +13,7 @@ function MobileExpandRow({ isOpen, colSpan, children }) {
       return () => cancelAnimationFrame(raf)
     }
     setVisible(false)
-    const t = setTimeout(() => setMounted(false), 260)
+    const t = setTimeout(() => setMounted(false), 340)
     return () => clearTimeout(t)
   }, [isOpen])
   if (!mounted) return null
@@ -156,9 +156,11 @@ const MOBILE_COLUMNS = [
   { id: 'date',    label: 'Date',    nowrap: true, align: 'right' },
 ]
 
+const PAGE_SIZE = 20
+
 export default function SourcesSection() {
   const [sort, setSort] = useState({ column: 'date', direction: 'desc' })
-  const [visibleCount, setVisibleCount] = useState(20)
+  const [page, setPage] = useState(0)
   const [expandedId, setExpandedId] = useState(null)
   const isMobile = useMediaQuery('(max-width: 767px)')
 
@@ -184,7 +186,11 @@ export default function SourcesSection() {
     })
   }, [ROWS, sort])
 
-  const visible = sorted.slice(0, visibleCount)
+  const totalPages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE))
+  const currentPage = Math.min(page, totalPages - 1)
+  const startIdx = currentPage * PAGE_SIZE
+  const endIdx = Math.min(startIdx + PAGE_SIZE, sorted.length)
+  const visible = sorted.slice(startIdx, endIdx)
 
   const toggleSort = (col) => {
     if (sort.column === col) {
@@ -334,38 +340,26 @@ export default function SourcesSection() {
               gap: '16px',
               padding: '6px 12px',
             }}>
-              {sorted.length > visibleCount && (() => {
-                const remaining = sorted.length - visibleCount
-                const nextChunk = Math.min(20, remaining)
-                const isInitial = visibleCount === 20
-                return (
-                  <span
-                    role="button"
-                    tabIndex={0}
-                    onClick={() => setVisibleCount(prev => prev + nextChunk)}
-                    onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') setVisibleCount(prev => prev + nextChunk) }}
-                    style={{ cursor: 'pointer', fontWeight: 400, color: 'var(--text)' }}
-                  >
-                    {isInitial ? `Show next ${nextChunk}` : 'Next'}
-                  </span>
-                )
-              })()}
-              {visibleCount > 20 && (
-                <span
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => setVisibleCount(prev => Math.max(20, prev - 20))}
-                  onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') setVisibleCount(prev => Math.max(20, prev - 20)) }}
-                  style={{ cursor: 'pointer', fontWeight: 400, color: 'var(--text)' }}
+              {currentPage > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setPage(p => Math.max(0, p - 1))}
+                  style={{ cursor: 'pointer', fontWeight: 400, color: 'var(--text)', background: 'transparent', border: 'none', padding: 0, font: 'inherit' }}
                 >
                   Back
-                </span>
+                </button>
+              )}
+              {currentPage < totalPages - 1 && (
+                <button
+                  type="button"
+                  onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
+                  style={{ cursor: 'pointer', fontWeight: 400, color: 'var(--text)', background: 'transparent', border: 'none', padding: 0, font: 'inherit' }}
+                >
+                  Next
+                </button>
               )}
               <span style={{ color: 'var(--text-muted)' }}>
-                Showing {Math.min(visibleCount, sorted.length) === sorted.length
-                  ? `all ${sorted.length}`
-                  : `1-${Math.min(visibleCount, sorted.length)} of ${sorted.length}`
-                }
+                Showing {sorted.length === 0 ? 0 : `${startIdx + 1}-${endIdx}`} of {sorted.length}
               </span>
             </div>
           </div>

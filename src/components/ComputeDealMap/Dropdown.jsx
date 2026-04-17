@@ -67,7 +67,7 @@ export default function Dropdown({
       return () => cancelAnimationFrame(raf)
     }
     setPanelVisible(false)
-    const t = setTimeout(() => setPanelMounted(false), 240)
+    const t = setTimeout(() => setPanelMounted(false), 340)
     return () => clearTimeout(t)
   }, [isOpen])
 
@@ -164,7 +164,7 @@ export default function Dropdown({
             display: 'grid',
             gridTemplateRows: panelVisible ? '1fr' : '0fr',
             opacity: panelVisible ? 1 : 0,
-            transition: 'grid-template-rows 240ms ease, opacity 200ms ease',
+            transition: 'grid-template-rows 320ms cubic-bezier(0.22, 0.61, 0.36, 1), opacity 260ms cubic-bezier(0.22, 0.61, 0.36, 1)',
             pointerEvents: panelVisible ? 'auto' : 'none',
           }}
         >

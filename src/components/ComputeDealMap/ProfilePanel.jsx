@@ -119,7 +119,7 @@ function PanelDealExpand({ isOpen, children }) {
       return () => cancelAnimationFrame(raf)
     }
     setVisible(false)
-    const t = setTimeout(() => setMounted(false), 260)
+    const t = setTimeout(() => setMounted(false), 340)
     return () => clearTimeout(t)
   }, [isOpen])
   if (!mounted) return null
