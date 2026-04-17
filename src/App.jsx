@@ -338,7 +338,7 @@ export default function App() {
     <div className={`computePage${panelOpen ? ' panelOpen' : ''}`}>
       <header className="computeHeader">
         <h1 className="computeTitle">
-          ai ecosystem transactions <span className="computeTitleBy">by <a href="https://jstwng.com" target="_blank" rel="noreferrer">justin wang</a></span>
+          ai ecosystem transactions<span className="computeTitleBy"> by <a href="https://jstwng.com" target="_blank" rel="noreferrer">justin wang</a></span>
         </h1>
         <p className={`computeTagline${taglineExpanded ? ' computeTaglineExpanded' : ''}`}>
           a structured, source-backed dataset of publicly disclosed ai ecosystem transactions across sovereign AI, hyperscaler capex, custom silicon, and the hardware providers behind them. last updated {BUILD_DATE_LABEL}. source data public repository{' '}
@@ -421,17 +421,47 @@ export default function App() {
               className={styles.graphModalFrame}
               onClick={e => e.stopPropagation()}
             >
-              <Graph
-                deals={filteredDeals}
-                hoveredEdge={hoveredEdge}
-                onHoverEdge={setHoveredEdge}
-                hoveredNode={hoveredNode}
-                onHoverNode={setHoveredNode}
-                onScrollToRow={id => setScrollToDealId(id)}
-                isModal
-                maximizable={false}
-                onRequestClose={() => setGraphMaximized(false)}
-              />
+              <div className={styles.graphModalToolbar}>
+                <Toolbar
+                  search={filters.search}
+                  onSearch={handleSearch}
+                  traceOrigin={traceOrigin}
+                  traceDestination={traceDestination}
+                  reachableFromOrigin={reachableFromOrigin}
+                  tracePaths={tracePaths}
+                  tracePathIndex={safePathIndex}
+                  traceNoPath={traceNoPath}
+                  traceNoPathBoth={traceNoPathBoth}
+                  onChangeTraceOrigin={handleChangeTraceOrigin}
+                  onChangeTraceDestination={handleChangeTraceDestination}
+                  onSwapTrace={swapTrace}
+                  onClearTrace={handleClearTrace}
+                  onSelectTracePath={setTracePathIndex}
+                  timelineFrom={timelineRange.from}
+                  timelineTo={timelineRange.to}
+                  timelineCount={timelineDeals.length}
+                  onChangeTimeline={handleChangeTimeline}
+                  onClearTimeline={handleClearTimeline}
+                  clusterCategories={clusterCategories}
+                  clusterCount={clusterHighlightCount}
+                  onToggleCluster={handleToggleCluster}
+                  onClearCluster={handleClearCluster}
+                  pathEdgeTypes={pathEdgeTypes}
+                />
+              </div>
+              <div className={styles.graphModalGraphSlot}>
+                <Graph
+                  deals={filteredDeals}
+                  hoveredEdge={hoveredEdge}
+                  onHoverEdge={setHoveredEdge}
+                  hoveredNode={hoveredNode}
+                  onHoverNode={setHoveredNode}
+                  onScrollToRow={id => setScrollToDealId(id)}
+                  isModal
+                  maximizable={false}
+                  onRequestClose={() => setGraphMaximized(false)}
+                />
+              </div>
             </div>
           </div>
         )}

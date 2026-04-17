@@ -897,12 +897,25 @@
   background: var(--bg);
   border: 1px solid var(--border);
   display: flex;
+  flex-direction: column;
   overflow: hidden;
   transform: scale(0.985);
   transition: transform 220ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 .graphModalBackdropOpen .graphModalFrame { transform: scale(1); }
-.graphModalFrame > div { flex: 1; height: 100%; }
+
+.graphModalToolbar {
+  flex: 0 0 auto;
+  padding: 12px 16px 0;
+  border-bottom: 1px solid var(--border-soft);
+}
+.graphModalToolbar > div { margin-bottom: 12px; }
+
+.graphModalGraphSlot {
+  flex: 1 1 auto;
+  min-height: 0;
+  position: relative;
+}
 
 .legendLabel {
   font-size: 11px;
