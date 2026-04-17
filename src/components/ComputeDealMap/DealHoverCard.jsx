@@ -1,7 +1,7 @@
 import styles from './styles.module.css'
 import { DEAL_TYPES } from './data.js'
 
-export default function DealCard({ edge, x, y, containerWidth, containerHeight }) {
+export default function DealHoverCard({ edge, x, y, containerWidth, containerHeight }) {
   if (!edge) return null
   const disclosed = edge.deals.filter(d => d.value_billions != null)
   const totalDisplay = disclosed.length === 0

@@ -1,6 +1,34 @@
-import { useMemo, useState } from 'react'
+import { Fragment, useEffect, useMemo, useState } from 'react'
 import styles from './styles.module.css'
 import { DEALS } from './data'
+import useMediaQuery from './useMediaQuery.js'
+
+function MobileExpandRow({ isOpen, colSpan, children }) {
+  const [mounted, setMounted] = useState(isOpen)
+  const [visible, setVisible] = useState(false)
+  useEffect(() => {
+    if (isOpen) {
+      setMounted(true)
+      const raf = requestAnimationFrame(() => setVisible(true))
+      return () => cancelAnimationFrame(raf)
+    }
+    setVisible(false)
+    const t = setTimeout(() => setMounted(false), 340)
+    return () => clearTimeout(t)
+  }, [isOpen])
+  if (!mounted) return null
+  return (
+    <tr className={styles.mobileTableExpandRow}>
+      <td colSpan={colSpan} className={styles.mobileTableExpandCell}>
+        <div className={`${styles.mobileTableExpandOuter} ${visible ? styles.mobileTableExpandOuterOpen : ''}`}>
+          <div className={styles.mobileTableExpandInner}>
+            {children}
+          </div>
+        </div>
+      </td>
+    </tr>
+  )
+}
 
 // Domain → publisher label. Anything not listed falls back to the bare hostname.
 const PUBLISHER = {
@@ -122,17 +150,22 @@ const COLUMNS = [
   { id: 'link',    label: 'Link',             width: '40px',  align: 'center' },
 ]
 
+const MOBILE_COLUMNS = [
+  { id: 'source',  label: 'Source',  nowrap: true },
+  { id: 'article', label: 'Article'               },
+  { id: 'date',    label: 'Date',    nowrap: true, align: 'right' },
+]
+
+const PAGE_SIZE = 20
+
 export default function SourcesSection() {
   const [sort, setSort] = useState({ column: 'date', direction: 'desc' })
-  const [visibleCount, setVisibleCount] = useState(20)
-  const [expandedIds, setExpandedIds] = useState(() => new Set())
+  const [page, setPage] = useState(0)
+  const [expandedId, setExpandedId] = useState(null)
+  const isMobile = useMediaQuery('(max-width: 767px)')
 
   const toggleExpanded = (id) => {
-    setExpandedIds(prev => {
-      const next = new Set(prev)
-      if (next.has(id)) next.delete(id); else next.add(id)
-      return next
-    })
+    setExpandedId(prev => (prev === id ? null : id))
   }
 
   const ROWS = useMemo(
@@ -153,7 +186,11 @@ export default function SourcesSection() {
     })
   }, [ROWS, sort])
 
-  const visible = sorted.slice(0, visibleCount)
+  const totalPages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE))
+  const currentPage = Math.min(page, totalPages - 1)
+  const startIdx = currentPage * PAGE_SIZE
+  const endIdx = Math.min(startIdx + PAGE_SIZE, sorted.length)
+  const visible = sorted.slice(startIdx, endIdx)
 
   const toggleSort = (col) => {
     if (sort.column === col) {
@@ -165,67 +202,131 @@ export default function SourcesSection() {
 
   return (
     <div className={styles.sourcesSection}>
-      <h3 className={styles.sourcesHeading}>Data Sources</h3>
+      <h3 className={styles.sourcesHeading}>
+        Data Sources <span className={styles.sectionSubheaderHint}>tap a row to expand</span>
+      </h3>
       <div className={styles.tableWrap}>
-        <table className={styles.table}>
-          <thead>
-            <tr>
-              {COLUMNS.map(c => (
-                <th
-                  key={c.id}
-                  onClick={() => toggleSort(c.id)}
-                  onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') toggleSort(c.id) }}
-                  data-align={c.align}
-                  tabIndex={0}
-                  scope="col"
-                  aria-sort={sort.column === c.id ? (sort.direction === 'asc' ? 'ascending' : 'descending') : 'none'}
-                  style={{
-                    ...(c.width ? { width: c.width } : {}),
-                    ...(c.nowrap ? { whiteSpace: 'nowrap' } : {}),
-                  }}
-                >
-                  {c.label}
-                  {sort.column === c.id && (
-                    <span className={styles.sortIndicator}>
-                      {sort.direction === 'asc' ? ' \u2191' : ' \u2193'}
-                    </span>
-                  )}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {visible.map(r => {
-              const expanded = expandedIds.has(r.n)
-              const truncClass = expanded ? styles.descTextExpanded : styles.descTextTruncated
-              return (
-                <tr
-                  key={r.n}
-                  className={styles.clickableRow}
-                  onClick={() => toggleExpanded(r.n)}
-                >
-                  <td className={styles.sourcesCategoryCell}>{r.source}</td>
-                  <td className={styles.descCell}>
-                    <div className={truncClass}>
+        {!isMobile && (
+          <table className={styles.table}>
+            <thead>
+              <tr>
+                {COLUMNS.map(c => (
+                  <th
+                    key={c.id}
+                    onClick={() => toggleSort(c.id)}
+                    onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') toggleSort(c.id) }}
+                    data-align={c.align}
+                    tabIndex={0}
+                    scope="col"
+                    aria-sort={sort.column === c.id ? (sort.direction === 'asc' ? 'ascending' : 'descending') : 'none'}
+                    style={{
+                      ...(c.width ? { width: c.width } : {}),
+                      ...(c.nowrap ? { whiteSpace: 'nowrap' } : {}),
+                    }}
+                  >
+                    {c.label}
+                    {sort.column === c.id && (
+                      <span className={styles.sortIndicator}>
+                        {sort.direction === 'asc' ? ' \u2191' : ' \u2193'}
+                      </span>
+                    )}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {visible.map(r => {
+                const expanded = expandedId === r.n
+                const truncClass = expanded ? styles.descTextExpanded : styles.descTextTruncated
+                return (
+                  <tr
+                    key={r.n}
+                    className={`${styles.clickableRow} ${styles.rowEnter}`}
+                    onClick={() => toggleExpanded(r.n)}
+                  >
+                    <td className={styles.sourcesCategoryCell}>{r.source}</td>
+                    <td className={styles.descCell}>
+                      <div className={truncClass}>
+                        {r.url ? (
+                          <a className={styles.sourcesLink} href={r.url} target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()}>{r.article}</a>
+                        ) : r.article}
+                      </div>
+                    </td>
+                    <td>{r.date}</td>
+                    <td>
+                      <div className={truncClass}>{r.deals}</div>
+                    </td>
+                    <td style={{ textAlign: 'center' }} onClick={e => e.stopPropagation()}>
                       {r.url ? (
-                        <a className={styles.sourcesLink} href={r.url} target="_blank" rel="noreferrer" onClick={e => e.stopPropagation()}>{r.article}</a>
-                      ) : r.article}
-                    </div>
-                  </td>
-                  <td>{r.date}</td>
-                  <td>
-                    <div className={truncClass}>{r.deals}</div>
-                  </td>
-                  <td style={{ textAlign: 'center' }} onClick={e => e.stopPropagation()}>
-                    {r.url ? (
-                      <a className={styles.sourceLink} href={r.url} target="_blank" rel="noreferrer">↗</a>
-                    ) : <span className={styles.fundingDash}>—</span>}
-                  </td>
+                        <a className={styles.sourceLink} href={r.url} target="_blank" rel="noreferrer">↗</a>
+                      ) : <span className={styles.fundingDash}>—</span>}
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        )}
+        {isMobile && (
+          <>
+            <table className={styles.mobileTable}>
+              <thead>
+                <tr>
+                  {MOBILE_COLUMNS.map(c => (
+                    <th
+                      key={c.id}
+                      onClick={() => toggleSort(c.id)}
+                      onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') toggleSort(c.id) }}
+                      data-align={c.align}
+                      tabIndex={0}
+                      scope="col"
+                      aria-sort={sort.column === c.id ? (sort.direction === 'asc' ? 'ascending' : 'descending') : 'none'}
+                      style={{ ...(c.nowrap ? { whiteSpace: 'nowrap' } : {}) }}
+                    >
+                      {c.label}
+                      {sort.column === c.id && (
+                        <span className={styles.sortIndicator}>
+                          {sort.direction === 'asc' ? ' \u2191' : ' \u2193'}
+                        </span>
+                      )}
+                    </th>
+                  ))}
                 </tr>
-              )
-            })}
-          </tbody>
-        </table>
+              </thead>
+              <tbody>
+                {visible.map(r => {
+                  const expanded = expandedId === r.n
+                  return (
+                    <Fragment key={r.n}>
+                      <tr
+                        className={styles.clickableRow}
+                        onClick={() => toggleExpanded(r.n)}
+                      >
+                        <td>{r.source}</td>
+                        <td>{r.article}</td>
+                        <td className={styles.valueCell}>{r.date}</td>
+                      </tr>
+                      <MobileExpandRow isOpen={expanded} colSpan={MOBILE_COLUMNS.length}>
+                        <div className={styles.mobileTableExpandMeta}>
+                          <span>{r.deals}</span>
+                          {r.url && (
+                            <a
+                              className={styles.sourceLink}
+                              href={r.url}
+                              target="_blank"
+                              rel="noreferrer"
+                              onClick={e => e.stopPropagation()}
+                            >↗</a>
+                          )}
+                        </div>
+                      </MobileExpandRow>
+                    </Fragment>
+                  )
+                })}
+              </tbody>
+            </table>
+          </>
+        )}
         {sorted.length > 0 && (
           <div style={{
             display: 'flex',
@@ -239,22 +340,26 @@ export default function SourcesSection() {
               gap: '16px',
               padding: '6px 12px',
             }}>
-              {sorted.length > visibleCount && (
-                <span
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => setVisibleCount(prev => prev + 20)}
-                  onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') setVisibleCount(prev => prev + 20) }}
-                  style={{ cursor: 'pointer', fontWeight: 400, color: 'var(--text)' }}
+              {currentPage > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setPage(p => Math.max(0, p - 1))}
+                  style={{ cursor: 'pointer', fontWeight: 400, color: 'var(--text)', background: 'transparent', border: 'none', padding: 0, font: 'inherit' }}
                 >
-                  Show 20 more
-                </span>
+                  Back
+                </button>
+              )}
+              {currentPage < totalPages - 1 && (
+                <button
+                  type="button"
+                  onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
+                  style={{ cursor: 'pointer', fontWeight: 400, color: 'var(--text)', background: 'transparent', border: 'none', padding: 0, font: 'inherit' }}
+                >
+                  Next
+                </button>
               )}
               <span style={{ color: 'var(--text-muted)' }}>
-                Showing {Math.min(visibleCount, sorted.length) === sorted.length
-                  ? `all ${sorted.length}`
-                  : `1-${Math.min(visibleCount, sorted.length)} of ${sorted.length}`
-                }
+                Showing {sorted.length === 0 ? 0 : `${startIdx + 1}-${endIdx}`} of {sorted.length}
               </span>
             </div>
           </div>

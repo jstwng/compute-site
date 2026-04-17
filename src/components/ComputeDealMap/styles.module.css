@@ -96,7 +96,7 @@
 }
 
 /* Canonical source affordance — the ↗ glyph shared across ProfilePanel
-   (description + deal rows), DealTable, DealCard, SourcesSection.
+   (description + deal rows), DealTable, DealHoverCard, SourcesSection.
    Rendered as a plain white arrow; no underline since it's a glyph,
    not text. Brightens to --text-strong on hover. */
 .profileDescriptionSource,
@@ -180,27 +180,122 @@
 .profileDealCounterparty { color: var(--text); font-weight: 600; }
 .profileDealDesc { margin: 4px 0; }
 
-@media (max-width: 900px) {
+@media (max-width: 767px) {
   .profilePanel {
     top: auto;
     bottom: 0;
     left: 0;
     right: 0;
     width: 100%;
-    height: 85vh;
+    height: auto;
+    max-height: 85vh;
+    padding: 0;
+    font-size: 14px;
     border-left: none;
     border-top: 1px solid var(--border);
     transform: translateY(100%);
+    transition: transform 380ms cubic-bezier(0.22, 0.61, 0.36, 1);
+    z-index: 1200;
+    /* Two-row layout: header is pinned flex:0, body scrolls flex:1.
+       Matches the MobileFilterSheet so the title + close never drift
+       while the user scrolls the panel's contents. */
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
   }
   .profilePanelOpen {
     transform: translateY(0);
-    animation: profilePanelSlideInUp 300ms ease;
+    animation: profilePanelSlideInUp 380ms cubic-bezier(0.22, 0.61, 0.36, 1);
   }
   @keyframes profilePanelSlideInUp {
     from { transform: translateY(100%); }
     to   { transform: translateY(0); }
   }
+  .profilePanelBackdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 380ms cubic-bezier(0.22, 0.61, 0.36, 1);
+    z-index: 1150;
+  }
+  .profilePanelBackdropOpen {
+    opacity: 1;
+    pointer-events: auto;
+  }
+  .profilePanelDragBar {
+    display: block;
+    width: 40px;
+    height: 4px;
+    margin: 0 auto;
+    background: var(--border);
+    align-self: center;
+  }
+  .profilePanelHeader {
+    flex: 0 0 auto;
+    background: var(--bg);
+    margin: 0;
+    padding: 4px 14px 8px;
+    border-bottom: 1px solid var(--border);
+    display: grid;
+    grid-template-columns: 1fr auto;
+    grid-template-rows: auto auto;
+    column-gap: 12px;
+    align-items: center;
+  }
+  .profilePanelDragBar {
+    grid-column: 1 / -1;
+    grid-row: 1;
+    align-self: center;
+  }
+  .profilePanelHeaderTitle {
+    grid-column: 1;
+    grid-row: 2;
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    font-size: 14px;
+  }
+  .profilePanelHeaderTitle .profileName { font-weight: 700; }
+  .profilePanelClose {
+    grid-column: 2;
+    grid-row: 2;
+  }
+  .profilePanelClose {
+    padding: 2px 4px;
+    font-size: 14px;
+  }
+  .profilePanelBody {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 8px 14px 16px;
+    gap: 8px;
+  }
+  /* Identity (company name + ticker, or edge pair) is hoisted into the
+     sticky header on mobile — hide the duplicate inside the body. */
+  .profileIdentity { display: none; }
+  /* Kill every standalone horizontal rule + row divider inside the
+     mobile panel. */
+  .profilePanelDivider { display: none; }
+  .profileDealRow { border-bottom: none; padding: 4px 0; }
+  .profileMeta,
+  .profileSubhead,
+  .profileDealMeta,
+  .profileDealDesc,
+  .profileDescription { font-size: 14px; }
+  /* Drag bar sits ABOVE the sticky header — pull it into the sticky
+     header's padding area so scroll doesn't leave it behind. */
+  .profilePanelDragBar { margin-top: 0; }
 }
+
+/* Hide the drag bar on desktop. */
+.profilePanelDragBar { display: none; }
 
 /* TimelineDock — From/To year dropdowns + deal-count summary, sits inline
    below the toolbar (same vertical position as TraceStrip) so it's always
@@ -293,7 +388,7 @@
 }
 .timelineDockReset:hover { color: var(--text); }
 
-@media (max-width: 700px) {
+@media (max-width: 767px) {
   .timelineDock {
     height: auto;
     padding: 8px 12px;
@@ -504,10 +599,43 @@
 }
 .toolbarPanelLink:hover { color: var(--text-strong); }
 
-@media (max-width: 900px) {
-  .toolbar { gap: 8px; flex-wrap: wrap; }
-  .toolbarChips { flex: 1 1 100%; flex-wrap: wrap; }
-  .toolbarSearch { flex: 1 1 100%; min-width: 0; }
+@media (max-width: 767px) {
+  .toolbar {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .toolbarSearch {
+    flex: 1 1 100%;
+    min-width: 0;
+    height: 32px;
+    font-size: 14px;
+    order: 1;
+  }
+  /* Fill the row width but size each chip proportionally to its content:
+     each starts at its natural width (flex-basis auto) and grows equally
+     to consume the leftover space, so the chip with the most text ends
+     up widest. */
+  .toolbarChips {
+    flex: 1 1 100%;
+    display: flex;
+    gap: 6px;
+    order: 2;
+  }
+  /* flex-grow: 1 with a basis of `auto` (content) = each chip starts at
+     its natural content width and grows equally to fill the row. Result:
+     the chip with more text stays wider. Explicitly override the
+     desktop `width: 100%` that otherwise forces equal widths. */
+  .toolbarChips > * {
+    flex-grow: 1;
+    flex-shrink: 0;
+    flex-basis: auto;
+    width: auto;
+  }
+  .toolbarChips button {
+    height: 32px;
+    justify-content: flex-start;
+    font-size: 14px;
+  }
 }
 
 .subtitle {
@@ -547,7 +675,7 @@
   min-width: 0;
 }
 
-@media (max-width: 900px) {
+@media (max-width: 767px) {
   .topSection { grid-template-columns: 1fr; }
 }
 
@@ -640,7 +768,7 @@
 .filterSearchMinimal::placeholder { color: var(--text-faint); }
 .filterSearchMinimal:focus { border-color: var(--text-muted); box-shadow: none; outline: none; }
 
-@media (max-width: 700px) {
+@media (max-width: 767px) {
   .filterSearchMinimal { width: 100%; flex: none; }
 }
 
@@ -766,8 +894,8 @@
 
 .graphClose {
   position: absolute;
-  bottom: 8px;
-  right: 8px;
+  top: 12px;
+  right: 12px;
   z-index: 4;
   background: transparent;
   border: none;
@@ -815,6 +943,11 @@
 .graphExpandHint:hover { color: var(--text); }
 .graphExpandIcon { display: block; flex-shrink: 0; }
 
+/* Two-step mount pattern in App.jsx: the modal renders with the base
+   class (opacity 0, frame scale 0.985), then on the next frame the
+   `graphModalBackdropOpen` class is added so the transition animates
+   from 0 -> 1. On close, the open class is removed and the base
+   transition plays in reverse before the modal unmounts. */
 .graphModalBackdrop {
   position: fixed;
   inset: 0;
@@ -824,8 +957,11 @@
   align-items: center;
   justify-content: center;
   padding: 40px;
-  animation: graphModalFade 150ms ease;
+  opacity: 0;
+  transition: opacity 200ms ease;
 }
+
+.graphModalBackdropOpen { opacity: 1; }
 
 .graphModalFrame {
   position: relative;
@@ -835,13 +971,47 @@
   background: var(--bg);
   border: 1px solid var(--border);
   display: flex;
-  overflow: hidden;
+  flex-direction: column;
+  /* Frame itself must not clip — dropdown panels in the toolbar row
+     extend below their buttons and need to escape the row. Only the
+     graph slot clips so the SVG doesn't bleed into the toolbar. */
+  overflow: visible;
+  transform: scale(0.985);
+  transition: transform 220ms cubic-bezier(0.4, 0, 0.2, 1);
 }
-.graphModalFrame > div { flex: 1; height: 100%; }
+.graphModalBackdropOpen .graphModalFrame { transform: scale(1); }
 
-@keyframes graphModalFade {
-  from { opacity: 0; }
-  to { opacity: 1; }
+.graphModalToolbar {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  padding: 12px 16px;
+}
+.graphModalToolbar > :first-child { flex: 1 1 auto; min-width: 0; margin-bottom: 0; }
+
+.graphModalClose {
+  flex: 0 0 auto;
+  align-self: center;
+  background: transparent;
+  border: none;
+  padding: 4px 6px;
+  color: var(--text-muted);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 11px;
+  transition: color 150ms ease;
+}
+.graphModalClose:hover { color: var(--text); }
+
+.graphModalGraphSlot {
+  flex: 1 1 auto;
+  min-height: 0;
+  position: relative;
+  overflow: hidden;
 }
 
 .legendLabel {
@@ -857,7 +1027,7 @@
   pointer-events: none;
 }
 
-/* DealCard */
+/* DealHoverCard */
 .dealCard {
   position: absolute;
   background: var(--card-bg);
@@ -1070,6 +1240,17 @@
 
 .sortIndicator { color: var(--text-muted); margin-left: 2px; }
 
+/* Fade-in applied to every <tr> at mount. CSS animations only run when an
+   element enters the DOM, so already-rendered rows don't re-animate on
+   re-render — only the initial batch and rows appended by the "Show
+   more" pagination button actually play this. Transform uses a tiny
+   translateY so rows drop into place instead of just fading. */
+@keyframes rowEnter {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.rowEnter { animation: rowEnter 260ms ease both; }
+
 /* SourcesSection */
 .sourcesSection {
   margin-top: 12px;
@@ -1083,6 +1264,31 @@
   letter-spacing: 0;
   text-transform: none;
   margin: 0;
+}
+
+/* Inline hint that sits next to "Transactions" / "Data Sources" on mobile.
+   Hidden on desktop; shown only when the mobile table takes over so the
+   tap-to-expand affordance stays discoverable. The wrapping space in the
+   h3 renders at the heading's 14px so the gap reads the way Justin
+   wants — larger than the hint's own font. */
+.sectionSubheaderHint {
+  display: none;
+}
+@media (max-width: 767px) {
+  .sectionSubheader,
+  .sourcesHeading {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 12px;
+  }
+  .sectionSubheaderHint {
+    display: inline;
+    flex: 0 0 auto;
+    font-size: 12px;
+    font-weight: 400;
+    color: var(--text-muted);
+  }
 }
 
 .sourcesHeading {
@@ -1109,6 +1315,246 @@
 
 .flashRow td { animation: flashHighlight 1.4s ease forwards; }
 
-@media (max-width: 640px) {
+@media (max-width: 767px) {
   .graphWrap { padding: 16px; }
+}
+
+/* Mobile card-list row for Transactions + Sources. */
+.mobileTableHint {
+  font-size: 13px;
+  color: var(--text-muted);
+  padding: 2px 4px 6px;
+}
+
+/* Mobile transactions table — compact 4-col variant of .table. Shares the
+   desktop look (header row with sortable columns, thin borders, no card
+   chrome) but drops min-width so it fits a 375-393px viewport. Per-row
+   tap toggles an inline expanded row that reveals deal type + full
+   description + source link. */
+.mobileTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+  color: var(--text);
+}
+.mobileTable thead th {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-strong);
+  text-align: left;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border-row);
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+  background: var(--bg);
+}
+.mobileTable thead th[data-align="right"] { text-align: right; }
+.mobileTable tbody td {
+  padding: 8px 0;
+  vertical-align: top;
+  line-height: 1.35;
+  border-bottom: 1px solid var(--border-soft);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 0;
+}
+.mobileTable tbody td + td,
+.mobileTable thead th + th { padding-left: 10px; }
+.mobileTable tbody td:first-child,
+.mobileTable thead th:first-child { padding-left: 4px; }
+.mobileTable tbody td:last-child,
+.mobileTable thead th:last-child { padding-right: 4px; }
+
+/* Source + Target cells take the flexible width; Value + Date shrink to content. */
+.mobileTable tbody td:nth-child(1),
+.mobileTable tbody td:nth-child(2),
+.mobileTable thead th:nth-child(1),
+.mobileTable thead th:nth-child(2) { width: auto; }
+.mobileTable tbody td:nth-child(3),
+.mobileTable tbody td:nth-child(4),
+.mobileTable thead th:nth-child(3),
+.mobileTable thead th:nth-child(4) { width: 1px; }
+
+.mobileTableExpandRow td { background: var(--row-hover); border-bottom: 1px solid var(--border-soft); }
+.mobileTableExpandCell {
+  padding: 0 !important;
+  white-space: normal !important;
+  overflow: hidden !important;
+  max-width: none !important;
+}
+/* grid-template-rows 0fr <-> 1fr animates the intrinsic content height
+   symmetrically for both open and close — same pattern the dropdown
+   panel uses. */
+.mobileTableExpandOuter {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transition: grid-template-rows 320ms cubic-bezier(0.22, 0.61, 0.36, 1), opacity 260ms cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+.mobileTableExpandOuterOpen {
+  grid-template-rows: 1fr;
+  opacity: 1;
+}
+.mobileTableExpandInner {
+  min-height: 0;
+  overflow: hidden;
+  padding: 8px 4px 12px;
+}
+.mobileTableExpandMeta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+  font-size: 14px;
+}
+.mobileTableExpandMeta .dealTypePill { font-size: 14px; }
+.mobileTableExpandDesc {
+  font-size: 14px;
+  color: var(--text);
+  line-height: 1.45;
+  word-break: break-word;
+}
+
+.sourceCardMobile {
+  display: block;
+  padding: 10px 8px;
+  border-bottom: 1px solid var(--border-soft);
+  color: var(--text);
+  text-decoration: none;
+  cursor: pointer;
+}
+.sourceCardMobile:hover .sourceCardMobileLine2 { color: var(--text); }
+.sourceCardMobileLine1 {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-strong);
+  line-height: 1.3;
+  gap: 8px;
+}
+.sourceCardMobileMeta {
+  display: inline-flex;
+  align-items: baseline;
+  min-width: 0;
+}
+.sourceCardMobileMetaDot {
+  color: var(--text-muted);
+  white-space: pre;
+}
+.sourceCardMobileArrow {
+  color: var(--text);
+  font-size: 14px;
+}
+.sourceCardMobileLine2 {
+  margin-top: 2px;
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.4;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sourceCardList {
+  display: flex;
+  flex-direction: column;
+}
+
+.mobileFilterBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1100;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: flex-end;
+  animation: mobileFilterBackdropFade 200ms ease;
+}
+@keyframes mobileFilterBackdropFade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.mobileFilterSheet {
+  width: 100%;
+  max-height: 85vh;
+  background: var(--bg);
+  border-top: 1px solid var(--border);
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  animation: mobileFilterSheetSlideUp 220ms ease;
+}
+@keyframes mobileFilterSheetSlideUp {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+.mobileFilterHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 12px 0;
+}
+.mobileFilterTitle {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-strong);
+}
+.mobileFilterDone {
+  font: inherit;
+  font-size: 14px;
+  color: var(--text);
+  background: transparent;
+  border: none;
+  padding: 10px 4px;
+  cursor: pointer;
+}
+.mobileFilterBody {
+  padding: 4px 16px 16px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+/* Bump multi-select option font in mobile filter sheet — the 12px default
+   is too small on a phone. Applies only when the option list sits inside
+   the mobile sheet's body. */
+.mobileFilterBody .clusterOption,
+.mobileFilterBody .clusterOptionActive {
+  font-size: 14px;
+  padding: 4px 6px;
+}
+
+.toolbarMobileChip {
+  height: 32px;
+  padding: 0 8px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+@media (max-width: 767px) {
+  .graphExpandHint {
+    opacity: 1;
+    padding: 8px;
+  }
+  .graphReset {
+    min-width: 44px;
+    min-height: 44px;
+    padding: 10px;
+  }
 }

@@ -19,7 +19,20 @@ const TIMELINE_FLOOR = '2020-01'
 
 const companyBySlug = new Map(COMPANIES.map(c => [c.slug, c]))
 
-export const DEALS = rawDeals
+// Dedupe at load time — the upstream data repo occasionally ships two
+// records for the same economic deal (e.g. a primary-source entry and a
+// news-coverage entry with identical value/date). Keep the first
+// occurrence per (source, target, date, value) key so the UI doesn't
+// show the same deal twice.
+const _seen = new Set()
+const _deduped = rawDeals.filter(d => {
+  const key = `${d.source_slug}__${d.target_slug}__${d.deal_type}__${d.date ?? ''}__${d.value_billions ?? ''}`
+  if (_seen.has(key)) return false
+  _seen.add(key)
+  return true
+})
+
+export const DEALS = _deduped
   .filter(d => !d.date || d.date >= TIMELINE_FLOOR)
   .map(d => {
     const src = companyBySlug.get(d.source_slug)

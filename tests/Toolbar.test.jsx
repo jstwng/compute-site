@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import Toolbar from '../src/components/ComputeDealMap/Toolbar.jsx'
 
@@ -59,5 +59,34 @@ describe('Toolbar', () => {
     render(<Toolbar {...baseProps} timelineFrom="2018-01" timelineTo="2026-12" />)
     const timelineButton = screen.getByText('Timeline:').closest('button')
     expect(timelineButton.textContent).toContain('2018 to 2026')
+  })
+})
+
+function mockMatchMedia(matches) {
+  vi.spyOn(window, 'matchMedia').mockImplementation(() => ({
+    matches,
+    addEventListener: () => {},
+    removeEventListener: () => {},
+  }))
+}
+
+describe('Toolbar mobile mode', () => {
+  beforeEach(() => vi.restoreAllMocks())
+  afterEach(() => vi.restoreAllMocks())
+
+  it('renders three chip buttons in a grid when mobile', () => {
+    mockMatchMedia(true)
+    render(<Toolbar {...baseProps} />)
+    expect(screen.getByText('Trace:')).toBeInTheDocument()
+    expect(screen.getByText('Timeline:')).toBeInTheDocument()
+    expect(screen.getByText('Cluster:')).toBeInTheDocument()
+  })
+
+  it('tapping the Trace chip opens a MobileFilterSheet titled Trace', () => {
+    mockMatchMedia(true)
+    render(<Toolbar {...baseProps} />)
+    fireEvent.click(screen.getByText('Trace:').closest('button'))
+    const sheetTitle = screen.getAllByText('Trace').find(n => n.tagName === 'H3')
+    expect(sheetTitle).toBeTruthy()
   })
 })

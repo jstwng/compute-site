@@ -4,6 +4,15 @@
   padding: 16px 16px 28px;
   font-family: 'Inter', system-ui, sans-serif;
   color: var(--text);
+  transition: padding-right 300ms ease;
+}
+
+/* When the profile panel is open, shift the page's right edge inward by
+   the panel's width so nothing (graph nodes, table columns) is hidden
+   underneath the fixed-position panel. Transition matches the panel's
+   300ms slide so the graph and panel move in sync. */
+.computePage.panelOpen {
+  padding-right: calc(16px + clamp(320px, 28%, 440px));
 }
 
 .computeHeader {
@@ -12,12 +21,28 @@
 
 .computeTitle {
   font-family: 'Inter', system-ui, sans-serif;
-  font-size: 13px;
-  font-weight: 500;
+  font-size: 14px;
+  font-weight: 600;
   letter-spacing: 0;
   margin: 0 0 6px 0;
   color: var(--text-strong);
 }
+
+.computeTitleBy {
+  font-weight: 400;
+  font-size: 12px;
+  color: var(--text-strong);
+  margin-left: 0;
+}
+
+.computeTitleBy a {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-color: var(--link-underline);
+  text-underline-offset: 2px;
+}
+
+.computeTitleBy a:hover { text-decoration-color: var(--text-strong); }
 
 .computeTagline {
   font-size: 12px;
@@ -35,6 +60,10 @@
 }
 
 .computeTagline a:hover { text-decoration-color: var(--text-strong); }
+
+.computeTaglineToggle {
+  display: none;
+}
 
 .graphBlock {
   height: min(62vh, 560px);
@@ -61,8 +90,65 @@
   text-underline-offset: 2px;
 }
 
-@media (max-width: 720px) {
-  .computePage { padding: 12px 12px 24px; }
-  .computeTitle { font-size: 12px; }
-  .graphBlock { height: 56vh; min-height: 320px; }
+@media (max-width: 767px) {
+  /* Hard cap the mobile viewport to 100% — long company names / path
+     lists in the Trace panel would otherwise blow out the layout and
+     enable horizontal scroll. */
+  html, body { overflow-x: hidden; max-width: 100%; }
+  .computePage {
+    padding: 12px 12px 24px;
+    overflow-x: hidden;
+    max-width: 100%;
+  }
+  /* On mobile the panel is a bottom sheet, not a right-edge drawer, so
+     don't shift the page horizontally. */
+  .computePage.panelOpen { padding-right: 12px; }
+  .graphBlock { height: min(46vh, 420px); min-height: 300px; }
+  .computeTagline {
+    font-size: 14px;
+    max-width: none;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .computeTitleBy { font-size: 14px; }
+  .computeTaglineExpanded {
+    -webkit-line-clamp: unset;
+    overflow: visible;
+  }
+  .computeTaglineToggle {
+    display: inline-block;
+    margin-top: 4px;
+    font: inherit;
+    font-size: 13px;
+    color: var(--text-muted);
+    background: transparent;
+    border: none;
+    padding: 0;
+    text-decoration: underline;
+    text-decoration-color: var(--link-underline);
+    text-underline-offset: 2px;
+    cursor: pointer;
+  }
+  .computeFooter { font-size: 12px; padding-top: 24px; }
+  /* FilterBar on mobile — fields share the full row 50/50, matching the
+     proportional Trace/Timeline/Cluster chip pattern above. */
+  .filterBar {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px !important;
+  }
+  .filterBarField { width: 100%; }
+  .filterBarButton {
+    width: 100%;
+    height: 36px !important;
+    padding-right: 8px !important;
+    font-size: 14px !important;
+    -webkit-tap-highlight-color: transparent;
+  }
 }
+
+/* Globally kill iOS Safari's default blue tap highlight — Justin's mobile
+   pass is all on dark mode and the blue flash reads loud. */
+a, button { -webkit-tap-highlight-color: transparent; }

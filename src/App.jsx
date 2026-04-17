@@ -16,6 +16,7 @@ import Graph from './components/ComputeDealMap/Graph.jsx'
 import DealTable from './components/ComputeDealMap/DealTable.jsx'
 import SourcesSection from './components/ComputeDealMap/SourcesSection.jsx'
 import ProfilePanel from './components/ComputeDealMap/ProfilePanel.jsx'
+import useMediaQuery from './components/ComputeDealMap/useMediaQuery.js'
 
 const BUILD_DATE_LABEL = (() => {
   const iso = typeof __BUILD_DATE__ === 'string' ? __BUILD_DATE__ : new Date().toISOString()
@@ -27,6 +28,8 @@ const BUILD_DATE_LABEL = (() => {
 const DEFAULT_TIMELINE = { from: EARLIEST_DATE, to: LATEST_DATE }
 
 export default function App() {
+  const isMobile = useMediaQuery('(max-width: 767px)')
+  const [taglineExpanded, setTaglineExpanded] = useState(false)
   const [filters, setFilters] = useState({ dealType: 'all', category: 'all', search: '' })
   const [hoveredEdge, setHoveredEdge] = useState(null)
   const [hoveredNode, setHoveredNode] = useState(null)
@@ -194,15 +197,17 @@ export default function App() {
   // under each hop in the Trace path breakdown.
   const pathEdgeTypes = useMemo(() => edgeDealTypes(traceDeals), [traceDeals])
 
+  // Defer the focus-change (which triggers the graph's heavy recompute)
+  // to the next frame so the panel open/close transition can paint first.
+  // Otherwise the render-time graph recompute blocks the main thread and
+  // the slide animation appears to stall for ~100-300ms before starting.
   const closePanel = useCallback(() => {
     setPanelMode(null)
     setPanelKey(null)
     setCounterpartyFilter(null)
-    setFocusedNodes(null)
+    requestAnimationFrame(() => setFocusedNodes(null))
   }, [])
 
-  // Opening a company panel also focuses the graph on that company + its
-  // direct neighbors. Click the same company again to dismiss both.
   const openCompany = useCallback(name => {
     if (panelMode === 'company' && panelKey === name) {
       closePanel()
@@ -211,11 +216,9 @@ export default function App() {
     setPanelMode('company')
     setPanelKey(name)
     setCounterpartyFilter(null)
-    setFocusedNodes(new Set([name]))
+    requestAnimationFrame(() => setFocusedNodes(new Set([name])))
   }, [panelMode, panelKey, closePanel])
 
-  // Opening a deal panel focuses the graph on both endpoints. Click the
-  // same deal (or row) again to dismiss.
   const openDeal = useCallback(edge => {
     const key = `${edge.source}__${edge.target}`
     if (panelMode === 'deal' && panelKey === key) {
@@ -224,7 +227,7 @@ export default function App() {
     }
     setPanelMode('deal')
     setPanelKey(key)
-    setFocusedNodes(new Set([edge.source, edge.target]))
+    requestAnimationFrame(() => setFocusedNodes(new Set([edge.source, edge.target])))
   }, [panelMode, panelKey, closePanel])
 
   const panelContent = useMemo(() => {
@@ -308,17 +311,48 @@ export default function App() {
     }
   }, [graphMaximized])
 
+  // Two-state mount so the modal gets both an enter AND an exit
+  // transition. `modalMounted` controls presence in the DOM;
+  // `modalOpen` flips the opacity/scale to their open values. On open
+  // we mount first, then flip open on the next frame so the browser
+  // sees opacity 0 -> 1 as a real transition. On close we flip open
+  // off immediately, wait for the transition, then unmount.
+  const [modalMounted, setModalMounted] = useState(false)
+  const [modalOpen, setModalOpen] = useState(false)
+
+  useEffect(() => {
+    if (graphMaximized) {
+      setModalMounted(true)
+      const raf = requestAnimationFrame(() => setModalOpen(true))
+      return () => cancelAnimationFrame(raf)
+    }
+    setModalOpen(false)
+    const t = setTimeout(() => setModalMounted(false), 220)
+    return () => clearTimeout(t)
+  }, [graphMaximized])
+
   const tableFilters = { dealType: filters.dealType, category: filters.category }
   const setTableFilters = next => setFilters(f => ({ ...f, dealType: next.dealType, category: next.category }))
 
+  const panelOpen = !!panelContent
+
   return (
-    <div className="computePage">
+    <div className={`computePage${panelOpen ? ' panelOpen' : ''}`}>
       <header className="computeHeader">
-        <h1 className="computeTitle">ai ecosystem transactions</h1>
-        <p className="computeTagline">
-          a structured, source-backed dataset of publicly disclosed ai ecosystem transactions across sovereign AI, hyperscaler capex, custom silicon, and the hardware providers behind them. maintained by justin wang. last updated {BUILD_DATE_LABEL}. source data public repository{' '}
+        <h1 className="computeTitle">
+          ai ecosystem transactions <span className="computeTitleBy">by <a href="https://jstwng.com" target="_blank" rel="noreferrer">justin wang</a></span>
+        </h1>
+        <p className={`computeTagline${taglineExpanded ? ' computeTaglineExpanded' : ''}`}>
+          a structured, source-backed dataset of publicly disclosed ai ecosystem transactions across sovereign AI, hyperscaler capex, custom silicon, and the hardware providers behind them. last updated {BUILD_DATE_LABEL}. source data public repository{' '}
           <a href="https://github.com/jstwng/compute-deal-map-data" target="_blank" rel="noreferrer">here</a>.
         </p>
+        <button
+          type="button"
+          className="computeTaglineToggle"
+          onClick={() => setTaglineExpanded(v => !v)}
+        >
+          {taglineExpanded ? 'less' : 'more'}
+        </button>
       </header>
 
       <Toolbar
@@ -357,7 +391,7 @@ export default function App() {
             hoveredNode={hoveredNode}
             onHoverNode={setHoveredNode}
             onScrollToRow={id => setScrollToDealId(id)}
-            onRequestMaximize={() => setGraphMaximized(true)}
+            onRequestMaximize={isMobile ? undefined : () => setGraphMaximized(true)}
             onClickNode={openCompany}
             onClickEdge={openDeal}
             focusedNodes={focusedNodes}
@@ -377,9 +411,9 @@ export default function App() {
             timelineRange={isTimelineActive ? timelineRange : null}
           />
         </div>
-        {graphMaximized && (
+        {modalMounted && (
           <div
-            className={styles.graphModalBackdrop}
+            className={`${styles.graphModalBackdrop}${modalOpen ? ' ' + styles.graphModalBackdropOpen : ''}`}
             role="dialog"
             aria-modal="true"
             aria-label="Expanded graph view"
@@ -389,22 +423,64 @@ export default function App() {
               className={styles.graphModalFrame}
               onClick={e => e.stopPropagation()}
             >
-              <Graph
-                deals={filteredDeals}
-                hoveredEdge={hoveredEdge}
-                onHoverEdge={setHoveredEdge}
-                hoveredNode={hoveredNode}
-                onHoverNode={setHoveredNode}
-                onScrollToRow={id => setScrollToDealId(id)}
-                isModal
-                maximizable={false}
-                onRequestClose={() => setGraphMaximized(false)}
-              />
+              <div className={styles.graphModalToolbar}>
+                <Toolbar
+                  search={filters.search}
+                  onSearch={handleSearch}
+                  traceOrigin={traceOrigin}
+                  traceDestination={traceDestination}
+                  reachableFromOrigin={reachableFromOrigin}
+                  tracePaths={tracePaths}
+                  tracePathIndex={safePathIndex}
+                  traceNoPath={traceNoPath}
+                  traceNoPathBoth={traceNoPathBoth}
+                  onChangeTraceOrigin={handleChangeTraceOrigin}
+                  onChangeTraceDestination={handleChangeTraceDestination}
+                  onSwapTrace={swapTrace}
+                  onClearTrace={handleClearTrace}
+                  onSelectTracePath={setTracePathIndex}
+                  timelineFrom={timelineRange.from}
+                  timelineTo={timelineRange.to}
+                  timelineCount={timelineDeals.length}
+                  onChangeTimeline={handleChangeTimeline}
+                  onClearTimeline={handleClearTimeline}
+                  clusterCategories={clusterCategories}
+                  clusterCount={clusterHighlightCount}
+                  onToggleCluster={handleToggleCluster}
+                  onClearCluster={handleClearCluster}
+                  pathEdgeTypes={pathEdgeTypes}
+                />
+                <button
+                  type="button"
+                  className={styles.graphModalClose}
+                  onClick={() => setGraphMaximized(false)}
+                  aria-label="Close expanded graph"
+                >
+                  <svg width="9" height="9" viewBox="0 0 12 12" aria-hidden="true">
+                    <path d="M1 1 L11 11 M11 1 L1 11" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="square" />
+                  </svg>
+                  <span>Close</span>
+                </button>
+              </div>
+              <div className={styles.graphModalGraphSlot}>
+                <Graph
+                  deals={filteredDeals}
+                  hoveredEdge={hoveredEdge}
+                  onHoverEdge={setHoveredEdge}
+                  hoveredNode={hoveredNode}
+                  onHoverNode={setHoveredNode}
+                  onScrollToRow={id => setScrollToDealId(id)}
+                  isModal
+                  maximizable={false}
+                />
+              </div>
             </div>
           </div>
         )}
 
-        <h3 className={styles.sectionSubheader}>Transactions</h3>
+        <h3 className={styles.sectionSubheader}>
+          Transactions <span className={styles.sectionSubheaderHint}>tap a row to expand</span>
+        </h3>
         <FilterBar filters={tableFilters} onChange={setTableFilters} />
         <DealTable
           deals={tableDeals}

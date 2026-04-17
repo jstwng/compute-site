@@ -2,8 +2,9 @@ import { useMemo, useState, useRef, useEffect, useLayoutEffect, useCallback } fr
 import { forceSimulation, forceLink, forceManyBody, forceCollide, forceX, forceY } from 'd3-force'
 import styles from './styles.module.css'
 import { COMPANIES, findCompany } from './companies.js'
-import DealCard from './DealCard.jsx'
+import DealHoverCard from './DealHoverCard.jsx'
 import CompanyCard from './CompanyCard.jsx'
+import useMediaQuery from './useMediaQuery.js'
 
 const NODE_WIDTH = 100
 const NODE_HEIGHT = 36
@@ -336,24 +337,64 @@ export default function Graph({ deals, hoveredEdge, onHoverEdge, hoveredNode, on
   }, [updateDims])
 
   // Watch for subsequent size changes (resize, modal open, responsive).
+  // Debounced: during animated width changes (e.g. the 300ms profile-panel
+  // slide that shifts the page's padding-right), the container resizes
+  // every frame. Re-running the force simulation each frame would pin
+  // the main thread; 150ms of settling lets the graph re-layout once
+  // after the animation ends.
   useEffect(() => {
     if (!wrapRef.current) return
-    const ro = new ResizeObserver(updateDims)
+    let timer = null
+    const ro = new ResizeObserver(() => {
+      if (timer) clearTimeout(timer)
+      timer = setTimeout(updateDims, 150)
+    })
     ro.observe(wrapRef.current)
-    return () => ro.disconnect()
+    return () => {
+      if (timer) clearTimeout(timer)
+      ro.disconnect()
+    }
   }, [updateDims])
 
-  // Layout is computed only once dims are known. While dims is null the
-  // positions map is empty and the SVG renders at opacity 0 so the user
-  // never sees a wrong-sized or mid-simulation state.
-  const { positions, visible } = useMemo(
-    () => dims
-      ? computeGraphLayout(deals, dims.w, dims.h, focusedNodes)
-      : { positions: new Map(), visible: new Set() },
-    [deals, dims, focusedNodes]
-  )
+  // Client-side LRU cache for computed layouts. `computeGraphLayout` runs
+  // ~1000 force-simulation ticks + an overlap-removal sweep and costs
+  // ~50-200ms on the main thread. Returning to a previously-seen
+  // configuration (most commonly: clearing focus to go back to the default
+  // view) is a cache hit and paints on the same frame instead of blocking
+  // the transition. The cache key bundles dims (rounded so a 1px resize
+  // doesn't invalidate), the deal set (filtered deals' ids), and the
+  // focus set — the three inputs that uniquely determine a layout.
+  const layoutCache = useRef(new Map())
+  const MAX_CACHE = 50
+
+  const { positions, visible } = useMemo(() => {
+    if (!dims) return { positions: new Map(), visible: new Set() }
+    const w = Math.round(dims.w / 20) * 20
+    const h = Math.round(dims.h / 20) * 20
+    const dealKey = deals.length + ':' + deals.map(d => d.id).join(',')
+    const focusKey = focusedNodes ? [...focusedNodes].sort().join('|') : ''
+    const cacheKey = `${w}x${h}|${dealKey}|${focusKey}`
+
+    const cache = layoutCache.current
+    const cached = cache.get(cacheKey)
+    if (cached) {
+      // Refresh LRU position so hot configurations stay warm.
+      cache.delete(cacheKey)
+      cache.set(cacheKey, cached)
+      return cached
+    }
+
+    const result = computeGraphLayout(deals, dims.w, dims.h, focusedNodes)
+    if (cache.size >= MAX_CACHE) {
+      const oldest = cache.keys().next().value
+      cache.delete(oldest)
+    }
+    cache.set(cacheKey, result)
+    return result
+  }, [deals, dims, focusedNodes])
 
   const layoutReady = positions.size > 0
+  const isMobile = useMediaQuery('(max-width: 767px)')
 
   // If filters drop every focused node out of the dataset, reset focus.
   useEffect(() => {
@@ -399,7 +440,7 @@ export default function Graph({ deals, hoveredEdge, onHoverEdge, hoveredNode, on
       .map(d => ({ ...d, counterparty: d.source === hoveredNode ? d.target : d.source }))
   }, [hoveredNode, deals])
 
-  // Aggregate edge for DealCard (when hovering any of the pair's edges)
+  // Aggregate edge for DealHoverCard (when hovering any of the pair's edges)
   const hoveredEdgeAggregate = useMemo(() => {
     if (!hoveredEdge) return null
     const pairDeals = graphDeals.filter(
@@ -501,6 +542,16 @@ export default function Graph({ deals, hoveredEdge, onHoverEdge, hoveredNode, on
           <span>Click anywhere to expand</span>
         </button>
       )}
+      {isModal && hasFocus && hoveringCanvas && !hoveredNode && (
+        <button
+          type="button"
+          className={styles.graphExpandHint}
+          onClick={e => { e.stopPropagation(); setFocusedNodes(null); onHoverNode(null); setCardPinned(false) }}
+          aria-label="Reset view"
+        >
+          <span>Click anywhere to reset</span>
+        </button>
+      )}
       <svg
         className={styles.graphSvg}
         viewBox={`0 0 ${dims?.w || 800} ${dims?.h || 380}`}
@@ -514,6 +565,11 @@ export default function Graph({ deals, hoveredEdge, onHoverEdge, hoveredNode, on
         onClick={e => {
           if (e.target !== e.currentTarget) return
           if (maximizable && !isModal && onRequestMaximize) onRequestMaximize()
+          else if (isModal && hasFocus) {
+            setFocusedNodes(null)
+            onHoverNode(null)
+            setCardPinned(false)
+          }
         }}
       >
         <g>
@@ -558,7 +614,11 @@ export default function Graph({ deals, hoveredEdge, onHoverEdge, hoveredNode, on
                 strokeWidth={sw}
                 opacity={opacity}
                 style={{
-                  transition: 'opacity 250ms ease, stroke-width 250ms ease',
+                  // x1/y1/x2/y2 are SVG 2 CSS-animatable geometry properties
+                  // (Chrome 77+, FF 70+, Safari 14+). Transitioning them makes
+                  // edges slide smoothly when the layout recomputes instead
+                  // of snapping to new positions.
+                  transition: 'x1 500ms cubic-bezier(0.4, 0, 0.2, 1), y1 500ms cubic-bezier(0.4, 0, 0.2, 1), x2 500ms cubic-bezier(0.4, 0, 0.2, 1), y2 500ms cubic-bezier(0.4, 0, 0.2, 1), opacity 300ms ease, stroke-width 250ms ease',
                   cursor: hoveredNode ? 'default' : 'pointer',
                   ...(edgeVisible ? null : { pointerEvents: 'none' }),
                 }}
@@ -583,9 +643,14 @@ export default function Graph({ deals, hoveredEdge, onHoverEdge, hoveredNode, on
               <g
                 key={company.name}
                 className={styles.graphEnter}
-                transform={`translate(${x}, ${y})`}
                 style={{
-                  transition: 'transform 400ms cubic-bezier(0.4, 0, 0.2, 1), opacity 250ms ease',
+                  // CSS transform (not the SVG attribute) so the transition
+                  // actually fires. The SVG attribute form doesn't animate via
+                  // CSS; with CSS transform, nodes slide between layouts
+                  // instead of snapping.
+                  transform: `translate(${x}px, ${y}px)`,
+                  transition: 'transform 500ms cubic-bezier(0.4, 0, 0.2, 1), opacity 300ms ease',
+                  willChange: 'transform',
                   cursor: nodeVisible ? 'pointer' : 'default',
                   opacity: nodeOpacity,
                   ...(nodeVisible ? null : { pointerEvents: 'none' }),
@@ -634,13 +699,13 @@ export default function Graph({ deals, hoveredEdge, onHoverEdge, hoveredNode, on
           })}
         </g>
       </svg>
-      {layoutReady && !hoveredNode && hoveredEdgeAggregate && (() => {
+      {!isMobile && layoutReady && !hoveredNode && hoveredEdgeAggregate && (() => {
         const src = positions.get(hoveredEdge.source)
         const tgt = positions.get(hoveredEdge.target)
         const midX = src && tgt ? (src.x + src.w / 2 + tgt.x + tgt.w / 2) / 2 : cursor.x
         const midY = src && tgt ? (src.y + NODE_HEIGHT / 2 + tgt.y + NODE_HEIGHT / 2) / 2 : cursor.y
         return (
-          <DealCard
+          <DealHoverCard
             edge={hoveredEdgeAggregate}
             x={midX}
             y={midY}
@@ -649,7 +714,7 @@ export default function Graph({ deals, hoveredEdge, onHoverEdge, hoveredNode, on
           />
         )
       })()}
-      {layoutReady && hoveredNode && (() => {
+      {!isMobile && layoutReady && hoveredNode && (() => {
         const node = positions.get(hoveredNode)
         // Flip placement above/below the node based on whether the node
         // sits in the top or bottom half of the graph — keeps the card
