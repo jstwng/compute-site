@@ -318,7 +318,7 @@ export default function App() {
     <div className={`computePage${panelOpen ? ' panelOpen' : ''}`}>
       <header className="computeHeader">
         <h1 className="computeTitle">
-          ai ecosystem transactions <span className="computeTitleBy">by justin wang</span>
+          ai ecosystem transactions <span className="computeTitleBy">by <a href="https://jstwng.com" target="_blank" rel="noreferrer">justin wang</a></span>
         </h1>
         <p className={`computeTagline${taglineExpanded ? ' computeTaglineExpanded' : ''}`}>
           a structured, source-backed dataset of publicly disclosed ai ecosystem transactions across sovereign AI, hyperscaler capex, custom silicon, and the hardware providers behind them. last updated {BUILD_DATE_LABEL}. source data public repository{' '}

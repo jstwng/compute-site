@@ -20,9 +20,10 @@ const CATEGORY_OPTIONS = [
 function DropdownFilter({ label, options, value, onChange, isOpen, onToggle }) {
   const activeLabel = options.find(o => o.value === value)?.label || ''
   return (
-    <div style={{ position: 'relative' }}>
+    <div className="filterBarField" style={{ position: 'relative' }}>
       <button
         type="button"
+        className="filterBarButton"
         onClick={onToggle}
         style={{
           display: 'flex',
@@ -106,6 +107,7 @@ export default function FilterBar({ filters, onChange }) {
   return (
     <div
       ref={barRef}
+      className="filterBar"
       style={{
         display: 'flex',
         flexDirection: 'row',

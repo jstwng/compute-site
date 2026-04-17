@@ -34,6 +34,15 @@
   margin-left: 4px;
 }
 
+.computeTitleBy a {
+  color: var(--text-strong);
+  text-decoration: underline;
+  text-decoration-color: var(--link-underline);
+  text-underline-offset: 2px;
+}
+
+.computeTitleBy a:hover { text-decoration-color: var(--text-strong); }
+
 .computeTagline {
   font-size: 12px;
   line-height: 1.5;
@@ -113,4 +122,18 @@
     cursor: pointer;
   }
   .computeFooter { font-size: 12px; padding-top: 24px; }
+  /* Stretch the two FilterBar fields to split the full row width on mobile
+     so they read as a single row of the transactions table's filter strip. */
+  .filterBar {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr;
+    gap: 4px !important;
+  }
+  .filterBarField { width: 100%; }
+  .filterBarButton {
+    width: 100%;
+    height: 40px !important;
+    padding-right: 8px !important;
+    font-size: 13px !important;
+  }
 }

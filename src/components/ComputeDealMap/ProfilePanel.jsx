@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import styles from './styles.module.css'
 import { DEAL_TYPES } from './data.js'
 import Dropdown from './Dropdown.jsx'
+import useMediaQuery from './useMediaQuery.js'
 
 export default function ProfilePanel({
   content,
@@ -14,6 +15,7 @@ export default function ProfilePanel({
   // there's something to paint while the close transition runs. Cleared
   // after the transition finishes.
   const [shownContent, setShownContent] = useState(null)
+  const isMobile = useMediaQuery('(max-width: 767px)')
 
   useEffect(() => {
     if (content) {
@@ -32,6 +34,15 @@ export default function ProfilePanel({
     return () => window.removeEventListener('keydown', onKey)
   }, [content, onClose])
 
+  // On mobile the panel is a modal bottom sheet — lock page scroll while
+  // it's open so the user only scrolls the panel's own contents.
+  useEffect(() => {
+    if (!content || !isMobile) return
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => { document.body.style.overflow = prev }
+  }, [content, isMobile])
+
   if (!shownContent) return null
 
   // Open animation is a CSS @keyframes that plays every time the
@@ -43,33 +54,42 @@ export default function ProfilePanel({
     : styles.profilePanel
 
   return (
-    <aside
-      className={panelClass}
-      role="complementary"
-      aria-hidden={!isOpen}
-    >
-      <div className={styles.profilePanelDragBar} aria-hidden="true" />
-      <div className={styles.profilePanelHeader}>
-        <button type="button" className={styles.profilePanelClose} onClick={onClose}>
-          Close
-        </button>
-      </div>
-      <div className={styles.profilePanelBody}>
-        {shownContent.mode === 'company'
-          ? <CompanyMode
-              content={shownContent}
-              onScrollToRow={onScrollToRow}
-              timelineRange={timelineRange}
-            />
-          : <DealMode
-              content={shownContent}
-              onOpenCompany={onOpenCompany}
-              onScrollToRow={onScrollToRow}
-              timelineRange={timelineRange}
-            />
-        }
-      </div>
-    </aside>
+    <>
+      {isMobile && (
+        <div
+          className={`${styles.profilePanelBackdrop}${isOpen ? ` ${styles.profilePanelBackdropOpen}` : ''}`}
+          onClick={onClose}
+          aria-hidden="true"
+        />
+      )}
+      <aside
+        className={panelClass}
+        role="complementary"
+        aria-hidden={!isOpen}
+      >
+        <div className={styles.profilePanelDragBar} aria-hidden="true" />
+        <div className={styles.profilePanelHeader}>
+          <button type="button" className={styles.profilePanelClose} onClick={onClose}>
+            Close
+          </button>
+        </div>
+        <div className={styles.profilePanelBody}>
+          {shownContent.mode === 'company'
+            ? <CompanyMode
+                content={shownContent}
+                onScrollToRow={onScrollToRow}
+                timelineRange={timelineRange}
+              />
+            : <DealMode
+                content={shownContent}
+                onOpenCompany={onOpenCompany}
+                onScrollToRow={onScrollToRow}
+                timelineRange={timelineRange}
+              />
+          }
+        </div>
+      </aside>
+    </>
   )
 }
 

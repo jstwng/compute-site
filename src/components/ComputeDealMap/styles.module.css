@@ -187,19 +187,33 @@
     left: 0;
     right: 0;
     width: 100%;
-    height: 60vh;
+    height: 50vh;
     border-left: none;
     border-top: 1px solid var(--border);
     transform: translateY(100%);
-    transition: transform 300ms ease;
+    transition: transform 280ms ease;
+    z-index: 1200;
   }
   .profilePanelOpen {
     transform: translateY(0);
-    animation: profilePanelSlideInUp 300ms ease;
+    animation: profilePanelSlideInUp 280ms ease;
   }
   @keyframes profilePanelSlideInUp {
     from { transform: translateY(100%); }
     to   { transform: translateY(0); }
+  }
+  .profilePanelBackdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 280ms ease;
+    z-index: 1150;
+  }
+  .profilePanelBackdropOpen {
+    opacity: 1;
+    pointer-events: auto;
   }
   .profilePanelDragBar {
     display: block;
@@ -1154,6 +1168,13 @@
 }
 
 /* Mobile card-list row for Transactions + Sources. */
+.mobileTableHint {
+  font-size: 11px;
+  color: var(--text-muted);
+  padding: 2px 4px 6px;
+  font-style: italic;
+}
+
 /* Mobile transactions table — compact 4-col variant of .table. Shares the
    desktop look (header row with sortable columns, thin borders, no card
    chrome) but drops min-width so it fits a 375-393px viewport. Per-row

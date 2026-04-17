@@ -72,6 +72,9 @@ export default function DealTable({ deals, hoveredEdge, scrollToDealId, onHoverE
   return (
     <div className={styles.tableWrap}>
       {banner && <div className={styles.tableBanner}>{banner}</div>}
+      {isMobile && (
+        <div className={styles.mobileTableHint}>tap a row to expand</div>
+      )}
       <table className={isMobile ? styles.mobileTable : styles.table}>
         <thead>
           <tr>
