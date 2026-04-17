@@ -337,11 +337,23 @@ export default function Graph({ deals, hoveredEdge, onHoverEdge, hoveredNode, on
   }, [updateDims])
 
   // Watch for subsequent size changes (resize, modal open, responsive).
+  // Debounced: during animated width changes (e.g. the 300ms profile-panel
+  // slide that shifts the page's padding-right), the container resizes
+  // every frame. Re-running the force simulation each frame would pin
+  // the main thread; 150ms of settling lets the graph re-layout once
+  // after the animation ends.
   useEffect(() => {
     if (!wrapRef.current) return
-    const ro = new ResizeObserver(updateDims)
+    let timer = null
+    const ro = new ResizeObserver(() => {
+      if (timer) clearTimeout(timer)
+      timer = setTimeout(updateDims, 150)
+    })
     ro.observe(wrapRef.current)
-    return () => ro.disconnect()
+    return () => {
+      if (timer) clearTimeout(timer)
+      ro.disconnect()
+    }
   }, [updateDims])
 
   // Layout is computed only once dims are known. While dims is null the
@@ -560,7 +572,11 @@ export default function Graph({ deals, hoveredEdge, onHoverEdge, hoveredNode, on
                 strokeWidth={sw}
                 opacity={opacity}
                 style={{
-                  transition: 'opacity 250ms ease, stroke-width 250ms ease',
+                  // x1/y1/x2/y2 are SVG 2 CSS-animatable geometry properties
+                  // (Chrome 77+, FF 70+, Safari 14+). Transitioning them makes
+                  // edges slide smoothly when the layout recomputes instead
+                  // of snapping to new positions.
+                  transition: 'x1 500ms cubic-bezier(0.4, 0, 0.2, 1), y1 500ms cubic-bezier(0.4, 0, 0.2, 1), x2 500ms cubic-bezier(0.4, 0, 0.2, 1), y2 500ms cubic-bezier(0.4, 0, 0.2, 1), opacity 300ms ease, stroke-width 250ms ease',
                   cursor: hoveredNode ? 'default' : 'pointer',
                   ...(edgeVisible ? null : { pointerEvents: 'none' }),
                 }}
@@ -585,9 +601,14 @@ export default function Graph({ deals, hoveredEdge, onHoverEdge, hoveredNode, on
               <g
                 key={company.name}
                 className={styles.graphEnter}
-                transform={`translate(${x}, ${y})`}
                 style={{
-                  transition: 'transform 400ms cubic-bezier(0.4, 0, 0.2, 1), opacity 250ms ease',
+                  // CSS transform (not the SVG attribute) so the transition
+                  // actually fires. The SVG attribute form doesn't animate via
+                  // CSS; with CSS transform, nodes slide between layouts
+                  // instead of snapping.
+                  transform: `translate(${x}px, ${y}px)`,
+                  transition: 'transform 500ms cubic-bezier(0.4, 0, 0.2, 1), opacity 300ms ease',
+                  willChange: 'transform',
                   cursor: nodeVisible ? 'pointer' : 'default',
                   opacity: nodeOpacity,
                   ...(nodeVisible ? null : { pointerEvents: 'none' }),

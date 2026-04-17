@@ -422,6 +422,7 @@ export default function App() {
           scrollToDealId={scrollToDealId}
           onHoverEdge={setHoveredEdge}
           onClickCompany={openCompany}
+          onClickDeal={openDeal}
           banner={tableBanner}
         />
         <SourcesSection />

@@ -1153,94 +1153,76 @@
 }
 
 /* Mobile card-list row for Transactions + Sources. */
-.dealCardMobile {
-  padding: 10px 8px;
-  border-bottom: 1px solid var(--border-soft);
-  cursor: pointer;
-  background: transparent;
-  transition: background 100ms ease;
+/* Mobile transactions table — compact 4-col variant of .table. Shares the
+   desktop look (header row with sortable columns, thin borders, no card
+   chrome) but drops min-width so it fits a 375-393px viewport. Per-row
+   tap toggles an inline expanded row that reveals deal type + full
+   description + source link. */
+.mobileTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  color: var(--text);
 }
-.dealCardMobile:active { background: var(--row-hover); }
-.dealCardMobileHighlighted { background: var(--row-highlight); }
-.dealCardMobileLine1 {
-  font-size: 14px;
+.mobileTable thead th {
+  font-size: 12px;
   font-weight: 600;
   color: var(--text-strong);
-  line-height: 1.3;
+  text-align: left;
   padding: 6px 0;
-}
-.dealCardMobileCompany {
-  display: inline-block;
-  padding: 8px 6px;
-  margin: -8px -6px;
+  border-bottom: 1px solid var(--border-row);
   cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+  background: var(--bg);
 }
-.dealCardMobileCompany:hover {
-  text-decoration: underline;
-  text-decoration-color: var(--link-underline);
-  text-underline-offset: 2px;
-}
-.dealCardMobileArrow {
-  color: var(--text-muted);
-  font-weight: 400;
-}
-.dealCardMobileLine2 {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 12px;
-  color: var(--text-muted);
-  line-height: 1.4;
-  margin-top: 2px;
-  gap: 8px;
-}
-.dealCardMobileSource {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  color: var(--text);
-  text-decoration: none;
-  cursor: pointer;
-}
-.dealCardMobileSource:hover { color: var(--text-strong); }
-.dealCardMobileLine3 {
-  font-size: 12px;
-  color: var(--text-muted);
-  line-height: 1.4;
-  margin-top: 2px;
+.mobileTable thead th[data-align="right"] { text-align: right; }
+.mobileTable tbody td {
+  padding: 8px 0;
+  vertical-align: top;
+  line-height: 1.35;
+  border-bottom: 1px solid var(--border-soft);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  max-width: 0;
 }
+.mobileTable tbody td + td,
+.mobileTable thead th + th { padding-left: 10px; }
+.mobileTable tbody td:first-child,
+.mobileTable thead th:first-child { padding-left: 4px; }
+.mobileTable tbody td:last-child,
+.mobileTable thead th:last-child { padding-right: 4px; }
 
-.dealCardList {
-  display: flex;
-  flex-direction: column;
+/* Source + Target cells take the flexible width; Value + Date shrink to content. */
+.mobileTable tbody td:nth-child(1),
+.mobileTable tbody td:nth-child(2),
+.mobileTable thead th:nth-child(1),
+.mobileTable thead th:nth-child(2) { width: auto; }
+.mobileTable tbody td:nth-child(3),
+.mobileTable tbody td:nth-child(4),
+.mobileTable thead th:nth-child(3),
+.mobileTable thead th:nth-child(4) { width: 1px; }
+
+.mobileTableExpandRow td { background: var(--row-hover); }
+.mobileTableExpandCell {
+  padding: 8px 4px 12px !important;
+  white-space: normal !important;
+  overflow: visible !important;
+  max-width: none !important;
 }
-.dealCardListSort {
+.mobileTableExpandMeta {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 8px;
-  padding: 8px 0;
-  font-size: 13px;
-  color: var(--text-muted);
+  margin-bottom: 6px;
 }
-.dealCardListSortLabel {
-  font-weight: 600;
+.mobileTableExpandDesc {
+  font-size: 12px;
   color: var(--text);
-}
-.dealCardListSortSelect {
-  flex: 1 1 auto;
-  height: 40px;
-  padding: 0 8px;
-  font: inherit;
-  font-size: 14px;
-  color: var(--text);
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 0;
+  line-height: 1.45;
+  word-break: break-word;
 }
 
 .sourceCardMobile {
