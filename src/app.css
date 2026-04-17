@@ -30,7 +30,8 @@
 
 .computeTitleBy {
   font-weight: 400;
-  color: var(--text-muted);
+  font-size: 12px;
+  color: var(--text-strong);
   margin-left: 4px;
 }
 
@@ -39,13 +40,9 @@
   text-decoration: underline;
   text-decoration-color: var(--link-underline);
   text-underline-offset: 2px;
-  transition: color 150ms ease;
 }
 
-.computeTitleBy a:hover {
-  color: #B0B0B0;
-  text-decoration-color: #B0B0B0;
-}
+.computeTitleBy a:hover { text-decoration-color: var(--text-strong); }
 
 .computeTagline {
   font-size: 12px;
@@ -107,6 +104,7 @@
     -webkit-box-orient: vertical;
     overflow: hidden;
   }
+  .computeTitleBy { font-size: 13px; }
   .computeTaglineExpanded {
     -webkit-line-clamp: unset;
     overflow: visible;
