@@ -21,11 +21,17 @@
 
 .computeTitle {
   font-family: 'Inter', system-ui, sans-serif;
-  font-size: 13px;
-  font-weight: 500;
+  font-size: 14px;
+  font-weight: 600;
   letter-spacing: 0;
   margin: 0 0 6px 0;
   color: var(--text-strong);
+}
+
+.computeTitleBy {
+  font-weight: 400;
+  color: var(--text-muted);
+  margin-left: 4px;
 }
 
 .computeTagline {

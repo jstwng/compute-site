@@ -317,9 +317,11 @@ export default function App() {
   return (
     <div className={`computePage${panelOpen ? ' panelOpen' : ''}`}>
       <header className="computeHeader">
-        <h1 className="computeTitle">ai ecosystem transactions</h1>
+        <h1 className="computeTitle">
+          ai ecosystem transactions <span className="computeTitleBy">by justin wang</span>
+        </h1>
         <p className={`computeTagline${taglineExpanded ? ' computeTaglineExpanded' : ''}`}>
-          a structured, source-backed dataset of publicly disclosed ai ecosystem transactions across sovereign AI, hyperscaler capex, custom silicon, and the hardware providers behind them. maintained by justin wang. last updated {BUILD_DATE_LABEL}. source data public repository{' '}
+          a structured, source-backed dataset of publicly disclosed ai ecosystem transactions across sovereign AI, hyperscaler capex, custom silicon, and the hardware providers behind them. last updated {BUILD_DATE_LABEL}. source data public repository{' '}
           <a href="https://github.com/jstwng/compute-deal-map-data" target="_blank" rel="noreferrer">here</a>.
         </p>
         <button
