@@ -14,7 +14,7 @@
   --edge:             #2A2A2A;
   --row-hover:        #F5F5F5;
   --row-highlight:    #F0F0F0;
-  --row-flash:        #FFF5CC;
+  --row-flash:        #D8D8D8;
   --link-underline:   #999999;
   --bar-track:        #EEEEEE;
   --bar-rank1:        #000000;
@@ -43,7 +43,7 @@
     --edge:             #B0B0B0;
     --row-hover:        #181818;
     --row-highlight:    #1F1F1F;
-    --row-flash:        #3A3A2A;
+    --row-flash:        #2E2E2E;
     --link-underline:   #555555;
     --bar-track:        #222222;
     --bar-rank1:        #FFFFFF;

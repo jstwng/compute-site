@@ -342,6 +342,17 @@ export default function SourcesSection() {
                   Show 20 more
                 </span>
               )}
+              {visibleCount > 20 && (
+                <span
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => setVisibleCount(prev => Math.max(20, prev - 20))}
+                  onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') setVisibleCount(prev => Math.max(20, prev - 20)) }}
+                  style={{ cursor: 'pointer', fontWeight: 400, color: 'var(--text)' }}
+                >
+                  Show 20 less
+                </span>
+              )}
               <span style={{ color: 'var(--text-muted)' }}>
                 Showing {Math.min(visibleCount, sorted.length) === sorted.length
                   ? `all ${sorted.length}`

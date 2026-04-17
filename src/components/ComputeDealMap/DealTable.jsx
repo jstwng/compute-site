@@ -259,6 +259,20 @@ export default function DealTable({ deals, hoveredEdge, scrollToDealId, onHoverE
                 </span>
               )
             })()}
+            {visibleCount > PAGE_SIZE && (() => {
+              const lastChunk = Math.min(PAGE_SIZE, visibleCount - PAGE_SIZE)
+              return (
+                <span
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => setVisibleCount(prev => Math.max(PAGE_SIZE, prev - PAGE_SIZE))}
+                  onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') setVisibleCount(prev => Math.max(PAGE_SIZE, prev - PAGE_SIZE)) }}
+                  style={{ cursor: 'pointer', fontWeight: 400, color: 'var(--text)' }}
+                >
+                  Show {lastChunk} less
+                </span>
+              )
+            })()}
             <span style={{ color: 'var(--text-muted)' }}>
               Showing {Math.min(visibleCount, sorted.length) === sorted.length
                 ? `all ${sorted.length}`
