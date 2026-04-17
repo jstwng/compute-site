@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import useMediaQuery from './useMediaQuery.js'
 
 // Single-select dropdown matching the visual style of the existing
 // FilterBar dropdowns (Deal type / Category).
@@ -27,10 +28,12 @@ export default function Dropdown({
   // independent). When omitted, Dropdown manages its own open state.
   isOpen: controlledOpen,
   onOpenChange,
+  nativeOnMobile = false,
 }) {
   const [uncontrolledOpen, setUncontrolledOpen] = useState(false)
   const [query, setQuery] = useState('')
   const wrapRef = useRef(null)
+  const isMobile = useMediaQuery('(max-width: 767px)')
 
   const isControlled = controlledOpen !== undefined
   const isOpen = isControlled ? controlledOpen : uncontrolledOpen
@@ -60,6 +63,37 @@ export default function Dropdown({
       ? options.filter(o => o.label.toLowerCase().includes(query.toLowerCase()))
       : options)
     : []
+
+  const useNative = nativeOnMobile && isMobile && Array.isArray(options) && options.length > 0 && !children
+
+  if (useNative) {
+    return (
+      <label className="">
+        <span className="" style={{ fontWeight: 700, fontSize: '12px', marginRight: '8px' }}>
+          {label}:
+        </span>
+        <select
+          value={value ?? ''}
+          onChange={(e) => onChange(e.target.value)}
+          style={{
+            height: '40px',
+            minWidth: '120px',
+            fontSize: '14px',
+            color: 'var(--text)',
+            background: 'var(--bg)',
+            border: '1px solid var(--border)',
+            borderRadius: 0,
+            padding: '0 8px',
+            fontFamily: 'inherit',
+          }}
+        >
+          {options.map(o => (
+            <option key={o.value} value={o.value}>{o.label}</option>
+          ))}
+        </select>
+      </label>
+    )
+  }
 
   return (
     <div ref={wrapRef} style={{ position: 'relative' }}>
