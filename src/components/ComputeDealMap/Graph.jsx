@@ -486,7 +486,7 @@ export default function Graph({ deals, hoveredEdge, onHoverEdge, hoveredNode, on
       {hasFocus && (
         <button
           type="button"
-          className={styles.graphReset}
+          className={isModal ? `${styles.graphReset} ${styles.graphResetOffset}` : styles.graphReset}
           onClick={() => { setFocusedNodes(null); onHoverNode(null); setCardPinned(false) }}
         >
           Reset view

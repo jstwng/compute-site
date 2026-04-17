@@ -55,6 +55,23 @@ export default function Dropdown({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen])
 
+  // Two-state mount so the panel fades + slides on BOTH open and close.
+  // `panelMounted` keeps it in the DOM during the exit transition;
+  // `panelVisible` drives opacity/transform. On open, mount then flip
+  // visible on rAF so the transition runs 0 -> 1 instead of snapping.
+  const [panelMounted, setPanelMounted] = useState(false)
+  const [panelVisible, setPanelVisible] = useState(false)
+  useEffect(() => {
+    if (isOpen) {
+      setPanelMounted(true)
+      const raf = requestAnimationFrame(() => setPanelVisible(true))
+      return () => cancelAnimationFrame(raf)
+    }
+    setPanelVisible(false)
+    const t = setTimeout(() => setPanelMounted(false), 180)
+    return () => clearTimeout(t)
+  }, [isOpen])
+
   const activeLabel = options?.find(o => o.value === value)?.label
   const display = displayValue ?? activeLabel ?? placeholder ?? ''
 
@@ -123,7 +140,7 @@ export default function Dropdown({
         <span style={{ fontWeight: 700 }}>{label}:</span>
         <span style={{ fontWeight: 400 }}>{display}</span>
       </button>
-      {isOpen && (
+      {panelMounted && (
         <div
           style={{
             position: 'absolute',
@@ -139,6 +156,11 @@ export default function Dropdown({
             boxSizing: 'border-box',
             display: 'flex',
             flexDirection: 'column',
+            opacity: panelVisible ? 1 : 0,
+            transform: `translateY(${panelVisible ? 0 : -4}px)`,
+            transformOrigin: 'top',
+            transition: 'opacity 160ms ease, transform 180ms cubic-bezier(0.4, 0, 0.2, 1)',
+            pointerEvents: panelVisible ? 'auto' : 'none',
           }}
         >
           {children ? children : (
